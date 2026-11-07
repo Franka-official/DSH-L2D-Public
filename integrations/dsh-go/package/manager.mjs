@@ -8,6 +8,7 @@ const labels = {disconnected: '未连接', authorizing: '等待 DSH L2D 授权�
   reconnecting: '连接中断，正在重连', reconnect_failed: '自动重连未成功', launch_required: '请先在本机打开 DSH L2D', pairing_busy: '手机已有待确认的连接'};
 const RECONNECT_DELAYS_MS = [1000, 2000, 4000];
 const RECONNECT_ATTEMPT_MS = 2500;
+const SAVED_CONNECT_ATTEMPT_MS = 8000;
 const PAIRING_WINDOW_MS = 90000;
 const PROOF_FAILURES = new Set(['CHALLENGE_INVALID', 'ENVELOPE_INVALID', 'PROTOCOL_INVALID', 'APP_INVALID', 'NONCE_MISMATCH',
   'PROOF_FORMAT_INVALID', 'HMAC_MISMATCH', 'PROOF_ABORTED', 'PROOF_TIMEOUT', 'FETCH_TYPE_ERROR', 'FETCH_NETWORK_ERROR', 'JSON_INVALID', 'PROOF_HTTP_REJECTED']);
@@ -78,7 +79,7 @@ export class LocalManager {
     // Plugin startup only restores an already-authorized running service; never opens an app.
     try {
       this.diagnostic('restore', 'PROOF_BEGIN');
-      const signal = AbortSignal.timeout(8000);
+      const signal = AbortSignal.timeout(SAVED_CONNECT_ATTEMPT_MS);
       await proveLocal(this.fetch, grant.bootstrap_challenge, signal, {diagnostic: (code, status) => this.diagnostic('restore_proof', code, status)});
       this.diagnostic('restore', 'PROOF_OK');
       if (this.closed || this.pending) return;
@@ -90,14 +91,17 @@ export class LocalManager {
   async connectLocal() {
     if (this.closed || this.recovery || this.pending || this.status === 'paired') return this.snapshot();
     const abort = this.abort = new AbortController();
-    const signal = AbortSignal.any([abort.signal, AbortSignal.timeout(RECONNECT_ATTEMPT_MS)]);
+    const pairDeadline = AbortSignal.timeout(RECONNECT_ATTEMPT_MS);
+    const savedDeadline = AbortSignal.timeout(SAVED_CONNECT_ATTEMPT_MS);
     this.setStatus('connecting');
     let publishPairing;
     const pairingStarted = new Promise(resolve => {publishPairing = resolve;});
     const task = (async () => {
       const saved = await this.store.read().catch(() => undefined);
+      const authorized = validGrant(saved);
+      const signal = AbortSignal.any([abort.signal, authorized ? savedDeadline : pairDeadline]);
       signal.throwIfAborted();
-      if (!validGrant(saved)) {await this.pairLocal(abort, signal, publishPairing); return;}
+      if (!authorized) {await this.pairLocal(abort, signal, publishPairing); return;}
       const challenge = saved.bootstrap_challenge;
       await proveLocal(this.fetch, challenge, signal,
         {diagnostic: (code, status) => this.diagnostic('resume_proof', code, status)});

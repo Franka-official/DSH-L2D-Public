@@ -1,6 +1,6 @@
 {
   "name": "dsh-go-live2d-call",
-  "version": "0.2.16",
+  "version": "0.2.17",
   "displayName": "DSH L2D桥接",
   "description": "Same-phone DSH L2D pairing and connection status over loopback, without phone control.",
   "type": "module",
