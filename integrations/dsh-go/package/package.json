@@ -1,0 +1,60 @@
+{
+  "name": "dsh-go-live2d-call",
+  "version": "0.2.14",
+  "displayName": "DSH L2D桥接",
+  "description": "Same-phone DSH L2D pairing and connection status over loopback, without phone control.",
+  "type": "module",
+  "main": "plugin.js",
+  "exports": {
+    ".": "./plugin.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json",
+    "./cordis.patch.yml": "./cordis.patch.yml"
+  },
+  "files": [
+    "plugin.js",
+    "client.js",
+    "adapter.mjs",
+    "call-policy.mjs",
+    "relay.mjs",
+    "identity.mjs",
+    "carrier.mjs",
+    "manager.mjs",
+    "speech.mjs",
+    "local-http.mjs",
+    "cordis.patch.yml",
+    "README.md",
+    "SOURCES.md",
+    "README.en.md",
+    "COPYING",
+    "THIRD_PARTY_NOTICES.md",
+    "proactive.mjs"
+  ],
+  "engines": {
+    "node": ">=22.19",
+    "dsh": ">=0.2.1-rc.4 <0.3.0-0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-plugin-manager"
+      ]
+    }
+  },
+  "dshGo": {
+    "v": 1,
+    "minApp": "1.0.10",
+    "title": {
+      "zh": "DSH L2D桥接",
+      "en": "DSH L2D Bridge"
+    },
+    "icon": "phone",
+    "contributes": {}
+  },
+  "license": "AGPL-3.0-only"
+}

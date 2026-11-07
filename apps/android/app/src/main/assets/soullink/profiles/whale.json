@@ -1,0 +1,656 @@
+{
+  "profile": {
+    "modelId": "whale",
+    "displayName": "鲸鱼娘",
+    "version": "1.0.0",
+    "modelPath": "live2d/whale/model.model3.json",
+    "schemaVersion": 2,
+    "parameterMap": {
+      "eyeOpen": {
+        "targets": [
+          "ParamEyeLOpen",
+          "ParamEyeROpen"
+        ],
+        "mode": "set",
+        "scale": 1,
+        "offset": 0,
+        "min": 0,
+        "max": 1.5
+      },
+      "eyeSmile": {
+        "target": "EyeSmile",
+        "mode": "set",
+        "scale": 1,
+        "offset": 0,
+        "min": -1,
+        "max": 1
+      },
+      "gazeX": {
+        "target": "ParamEyeBallX",
+        "mode": "set",
+        "scale": 1,
+        "offset": 0,
+        "min": -1,
+        "max": 1
+      },
+      "gazeY": {
+        "target": "ParamEyeBallY",
+        "mode": "set",
+        "scale": 1,
+        "offset": 0,
+        "min": -1,
+        "max": 1
+      },
+      "headX": {
+        "target": "AngleX",
+        "mode": "set",
+        "scale": 30,
+        "offset": 0,
+        "min": -30,
+        "max": 30
+      },
+      "headY": {
+        "target": "AngleY",
+        "mode": "set",
+        "scale": 30,
+        "offset": 0,
+        "min": -30,
+        "max": 30
+      },
+      "headZ": {
+        "target": "AngleZ",
+        "mode": "set",
+        "scale": 30,
+        "offset": 0,
+        "min": -30,
+        "max": 30
+      },
+      "bodyX": {
+        "target": "PositionX",
+        "mode": "set",
+        "scale": 12,
+        "offset": 0,
+        "min": -30,
+        "max": 30
+      },
+      "bodyY": {
+        "target": "LeanInput",
+        "mode": "set",
+        "scale": 12,
+        "offset": 0,
+        "min": -30,
+        "max": 30
+      },
+      "bodyZ": {
+        "target": "PositionZ",
+        "mode": "set",
+        "scale": 12,
+        "offset": 0,
+        "min": -30,
+        "max": 30
+      },
+      "mouthSmile": {
+        "target": "ParamMouthForm",
+        "mode": "set",
+        "scale": 1,
+        "offset": 0,
+        "min": -1,
+        "max": 1
+      },
+      "browInnerUp": {
+        "targets": [
+          "ParamBrowLY",
+          "ParamBrowRY"
+        ],
+        "mode": "set",
+        "scale": 1,
+        "offset": 0,
+        "min": -1,
+        "max": 1
+      },
+      "breath": {
+        "target": "ParamBreath",
+        "mode": "set",
+        "scale": 1,
+        "offset": -0.5,
+        "min": 0,
+        "max": 1
+      },
+      "eyeBlinkL": {
+        "target": "ParamEyeLOpen",
+        "mode": "subtract",
+        "scale": 1,
+        "min": 0,
+        "max": 1.5
+      },
+      "eyeBlinkR": {
+        "target": "ParamEyeROpen",
+        "mode": "subtract",
+        "scale": 1,
+        "min": 0,
+        "max": 1.5
+      },
+      "eyeSquint": {
+        "targets": [
+          "ParamEyeLOpen",
+          "ParamEyeROpen"
+        ],
+        "mode": "subtract",
+        "scale": 0.22,
+        "min": 0,
+        "max": 1.5
+      },
+      "mouthFrown": {
+        "target": "ParamMouthForm",
+        "mode": "subtract",
+        "scale": 1,
+        "min": -1,
+        "max": 1
+      }
+    },
+    "idleConfig": {
+      "gazeX": [
+        -0.12,
+        0.12
+      ],
+      "gazeY": [
+        -0.06,
+        0.08
+      ],
+      "headX": [
+        -0.08,
+        0.08
+      ],
+      "headY": [
+        -0.04,
+        0.04
+      ],
+      "headZ": [
+        -0.05,
+        0.05
+      ],
+      "bodyX": [
+        -0.045,
+        0.045
+      ],
+      "bodyY": [
+        -0.014,
+        0.014
+      ],
+      "bodyZ": [
+        -0.055,
+        0.055
+      ],
+      "mouthSmile": [
+        0.02,
+        0.1
+      ],
+      "browInnerUp": [
+        0,
+        0.06
+      ],
+      "eyeOpen": [
+        0.9,
+        1
+      ]
+    },
+    "autoProfile": {
+      "provider": "manual",
+      "promptVersion": "dsh-native-review-20261103",
+      "notes": [
+        "Uses official Soullink profile-generator resolveStandard at 02cd75ac0a085a87d84d1a885f1b33eca8742d53.",
+        "Actual Core ranges and approved nonstandard rig mappings are manually reviewed; no LLM, training or source hash.",
+        "Official idle defaults and official ModelProfileAdapter are reused.",
+        "Speech aperture and authored arm FSM parameters are excluded; model assets remain native."
+      ]
+    },
+    "nativeAnimations": {
+      "expressions": [
+        {
+          "name": "体型1",
+          "file": "Exp3/体型1.exp3.json"
+        },
+        {
+          "name": "体型2",
+          "file": "Exp3/体型2.exp3.json"
+        },
+        {
+          "name": "兔牙",
+          "file": "Exp3/兔牙.exp3.json"
+        },
+        {
+          "name": "前倾",
+          "file": "Exp3/前倾.exp3.json"
+        },
+        {
+          "name": "加载",
+          "file": "Exp3/加载.exp3.json"
+        },
+        {
+          "name": "单片眼镜",
+          "file": "Exp3/单片眼镜.exp3.json"
+        },
+        {
+          "name": "圈圈眼",
+          "file": "Exp3/圈圈眼.exp3.json"
+        },
+        {
+          "name": "尾巴开关",
+          "file": "Exp3/尾巴开关.exp3.json"
+        },
+        {
+          "name": "屑屑眼",
+          "file": "Exp3/屑屑眼.exp3.json"
+        },
+        {
+          "name": "流冷汗",
+          "file": "Exp3/流冷汗.exp3.json"
+        },
+        {
+          "name": "流泪",
+          "file": "Exp3/流泪.exp3.json"
+        },
+        {
+          "name": "爱心眼",
+          "file": "Exp3/爱心眼.exp3.json"
+        },
+        {
+          "name": "竖食指关",
+          "file": "Exp3/竖食指关.exp3.json"
+        },
+        {
+          "name": "竖食指开",
+          "file": "Exp3/竖食指开.exp3.json"
+        },
+        {
+          "name": "胸口衣服",
+          "file": "Exp3/胸口衣服.exp3.json"
+        },
+        {
+          "name": "脱鞋",
+          "file": "Exp3/脱鞋.exp3.json"
+        },
+        {
+          "name": "脸红",
+          "file": "Exp3/脸红.exp3.json"
+        },
+        {
+          "name": "裙子切换",
+          "file": "Exp3/裙子切换.exp3.json"
+        },
+        {
+          "name": "钢盆",
+          "file": "Exp3/钢盆.exp3.json"
+        },
+        {
+          "name": "黑框眼镜",
+          "file": "Exp3/黑框眼镜.exp3.json"
+        },
+        {
+          "name": "黑脸",
+          "file": "Exp3/黑脸.exp3.json"
+        },
+        {
+          "name": "默认体型",
+          "file": "Exp3/默认体型.exp3.json"
+        },
+        {
+          "name": "＞＜",
+          "file": "Exp3/＞＜.exp3.json",
+          "params": [
+            "key3",
+            "key4",
+            "key5",
+            "key6"
+          ]
+        }
+      ],
+      "motions": [
+        {
+          "group": "Idle",
+          "index": 0,
+          "file": "Animation/IDLE.motion3.json"
+        },
+        {
+          "group": "Manual",
+          "index": 0,
+          "file": "Animation/举手切默认手.motion3.json"
+        },
+        {
+          "group": "Manual",
+          "index": 1,
+          "file": "Animation/狗尾草切回默认手.motion3.json"
+        },
+        {
+          "group": "Manual",
+          "index": 2,
+          "file": "Animation/狗尾草切换出来.motion3.json"
+        },
+        {
+          "group": "Manual",
+          "index": 3,
+          "file": "Animation/竖手指切出来动画.motion3.json"
+        },
+        {
+          "group": "Manual",
+          "index": 4,
+          "file": "Animation/竖手指切回默认.motion3.json"
+        },
+        {
+          "group": "Manual",
+          "index": 5,
+          "file": "Animation/脱捕.motion3.json"
+        },
+        {
+          "group": "Manual",
+          "index": 6,
+          "file": "Animation/默认手切举手.motion3.json"
+        }
+      ]
+    },
+    "neutralParams": {
+      "ParamEyeLOpen": 1,
+      "ParamEyeROpen": 1,
+      "EyeSmile": 0,
+      "ParamEyeBallX": 0,
+      "ParamEyeBallY": 0,
+      "AngleX": 0,
+      "AngleY": 0,
+      "AngleZ": 0,
+      "PositionX": 0,
+      "LeanInput": 0,
+      "PositionZ": 0,
+      "ParamMouthForm": 0,
+      "ParamBrowLY": 0,
+      "ParamBrowRY": 0,
+      "ParamBreath": 0,
+      "key5": 0,
+      "key2": 0,
+      "key1": 0,
+      "key7": 0
+    },
+    "parameterSmoothing": {
+      "ParamEyeLOpen": 26,
+      "ParamEyeROpen": 26,
+      "EyeSmile": 26,
+      "ParamEyeBallX": 11,
+      "ParamEyeBallY": 11,
+      "AngleX": 8,
+      "AngleY": 8,
+      "AngleZ": 8,
+      "PositionX": 6,
+      "LeanInput": 6,
+      "PositionZ": 6,
+      "ParamMouthForm": 12,
+      "ParamBrowLY": 12,
+      "ParamBrowRY": 12,
+      "ParamBreath": 5,
+      "key5": 4,
+      "key2": 4,
+      "key1": 4,
+      "key7": 4
+    },
+    "privateEmotionMap": {
+      "key5": {
+        "target": "key5",
+        "category": "positiveEye",
+        "activeValue": 1,
+        "neutralValue": 0,
+        "source": "manual",
+        "confidence": 1
+      },
+      "key2": {
+        "target": "key2",
+        "category": "tear",
+        "activeValue": 1,
+        "neutralValue": 0,
+        "source": "manual",
+        "confidence": 1
+      },
+      "key1": {
+        "target": "key1",
+        "category": "shadow",
+        "activeValue": 1,
+        "neutralValue": 0,
+        "source": "manual",
+        "confidence": 1
+      },
+      "key7": {
+        "target": "key7",
+        "category": "blush",
+        "activeValue": 1,
+        "neutralValue": 0,
+        "source": "manual",
+        "confidence": 1
+      }
+    },
+    "capabilities": {
+      "headControl": true,
+      "bodyControl": true,
+      "eyeBlink": true,
+      "eyeSmile": true,
+      "gazeControl": true,
+      "mouthOpen": false,
+      "mouthSmile": true,
+      "browControl": true,
+      "blush": false,
+      "tear": false,
+      "sweat": false,
+      "breath": true
+    }
+  },
+  "native": {
+    "parameters": [
+      {
+        "id": "ParamEyeLOpen",
+        "min": 0,
+        "default": 1,
+        "max": 1.5,
+        "stage": "beforePhysics"
+      },
+      {
+        "id": "ParamEyeROpen",
+        "min": 0,
+        "default": 1,
+        "max": 1.5,
+        "stage": "beforePhysics"
+      },
+      {
+        "id": "EyeSmile",
+        "min": -1,
+        "default": 0,
+        "max": 1,
+        "stage": "beforePhysics"
+      },
+      {
+        "id": "ParamEyeBallX",
+        "min": -1,
+        "default": 0,
+        "max": 1,
+        "stage": "beforePhysics"
+      },
+      {
+        "id": "ParamEyeBallY",
+        "min": -1,
+        "default": 0,
+        "max": 1,
+        "stage": "beforePhysics"
+      },
+      {
+        "id": "AngleX",
+        "min": -30,
+        "default": 0,
+        "max": 30,
+        "stage": "beforePhysics"
+      },
+      {
+        "id": "AngleY",
+        "min": -30,
+        "default": 0,
+        "max": 30,
+        "stage": "beforePhysics"
+      },
+      {
+        "id": "AngleZ",
+        "min": -30,
+        "default": 0,
+        "max": 30,
+        "stage": "beforePhysics"
+      },
+      {
+        "id": "PositionX",
+        "min": -30,
+        "default": 0,
+        "max": 30,
+        "stage": "beforePhysics"
+      },
+      {
+        "id": "LeanInput",
+        "min": -30,
+        "default": 0,
+        "max": 30,
+        "stage": "beforePhysics"
+      },
+      {
+        "id": "PositionZ",
+        "min": -30,
+        "default": 0,
+        "max": 30,
+        "stage": "beforePhysics"
+      },
+      {
+        "id": "ParamMouthForm",
+        "min": -1,
+        "default": 0,
+        "max": 1,
+        "stage": "beforePhysics"
+      },
+      {
+        "id": "ParamBrowLY",
+        "min": -1,
+        "default": 0,
+        "max": 1,
+        "stage": "beforePhysics"
+      },
+      {
+        "id": "ParamBrowRY",
+        "min": -1,
+        "default": 0,
+        "max": 1,
+        "stage": "beforePhysics"
+      },
+      {
+        "id": "ParamBreath",
+        "min": 0,
+        "default": 0,
+        "max": 1,
+        "stage": "beforePhysics"
+      },
+      {
+        "id": "key5",
+        "min": 0,
+        "default": 0,
+        "max": 1,
+        "stage": "beforePhysics"
+      },
+      {
+        "id": "key2",
+        "min": 0,
+        "default": 0,
+        "max": 1,
+        "stage": "beforePhysics"
+      },
+      {
+        "id": "key1",
+        "min": 0,
+        "default": 0,
+        "max": 1,
+        "stage": "beforePhysics"
+      },
+      {
+        "id": "key7",
+        "min": 0,
+        "default": 0,
+        "max": 1,
+        "stage": "beforePhysics"
+      }
+    ],
+    "expectedModelParameterCount": 509,
+    "expectedMocBytes": 16498560,
+    "speechApertureOwnedByNative": true,
+    "armFSMOwnedByNative": true,
+    "crossEyePartGateOwnedByNative": true,
+    "manualNativeExpressionsTakePriority": true,
+    "disableLegacyContinuousPerformanceWhenJSActive": true
+  },
+  "review": {
+    "sourceCommit": "02cd75ac0a085a87d84d1a885f1b33eca8742d53",
+    "profileProvider": "manual_review_with_official_standard_resolver",
+    "modelSource": "actual_model3_CDI_Core_ranges_author_physics",
+    "fullyAutomaticAdaptationClaimed": false,
+    "hashComputed": false,
+    "mappedFACS": 17,
+    "totalFACS": 24,
+    "officialLowConfidenceKeys": [
+      "eyeSmile",
+      "headX",
+      "headY",
+      "headZ",
+      "bodyX",
+      "bodyY",
+      "bodyZ"
+    ],
+    "unsupported": [
+      {
+        "key": "mouthOpen",
+        "reason": "owned_by_native_speech_aperture"
+      },
+      {
+        "key": "browOuterUp",
+        "reason": "author_physics_output_without_reviewed_input_adapter",
+        "ids": [
+          "ParamBrowLAngle",
+          "ParamBrowRAngle"
+        ]
+      },
+      {
+        "key": "browDown",
+        "reason": "official_standard_resolver_unmapped"
+      },
+      {
+        "key": "blush",
+        "reason": "official_standard_resolver_unmapped"
+      }
+    ],
+    "manualOverrides": [
+      {
+        "key": "eyeOpen",
+        "reason": "author_group_order_is_right_left_not_semantic_left_right",
+        "automaticIds": [
+          "ParamEyeROpen",
+          "ParamEyeLOpen"
+        ],
+        "reviewedIds": [
+          "ParamEyeLOpen",
+          "ParamEyeROpen"
+        ],
+        "evidence": "actual_Core_ranges_and_existing_native_standard_eye_channels"
+      },
+      {
+        "key": "eyeSmile",
+        "reason": "reviewed_nonstandard_eye_smile_input",
+        "automaticIds": [],
+        "reviewedIds": [
+          "EyeSmile"
+        ],
+        "evidence": "existing_native_EyeSmile_input_validation_and_actual_Core_range"
+      }
+    ],
+    "officialAdapterTests": {
+      "samples": 1001,
+      "checked": 19019,
+      "rangeViolations": 0
+    },
+    "deviceOrVisualPassClaimed": false
+  }
+}

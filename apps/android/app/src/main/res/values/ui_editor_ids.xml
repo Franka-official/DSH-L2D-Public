@@ -1,0 +1,7 @@
+<resources>
+    <item type="id" name="placementDragSurface"/>
+    <item type="id" name="placementScale"/>
+    <item type="id" name="placementDone"/>
+    <item type="id" name="placementReset"/>
+    <item type="id" name="placementSizeLabel"/>
+</resources>

@@ -1,0 +1,39 @@
+{
+  "schema": "dsh-android-source-completeness-v2",
+  "date": "2026-11-05",
+  "source_complete": true,
+  "fresh_clone_buildable": true,
+  "build_performed": true,
+  "compile_verified": true,
+  "device_verified": true,
+  "scope": "Project-owned application/runtime/build source closure; vendor SDK binaries and model weights remain external licensed inputs.",
+  "source_revision_at_update": "61142be8e5a6ee46f8058a0148bd23be6e34b2a9",
+  "device_tested_source_commit": "26dbbf307161a5d9eacd71ae22d543e09b774f72",
+  "motion_typescript_portable_build_collected": true,
+  "native_source_compile_verified": true,
+  "legacy_native_reused": false,
+  "external_inputs": {
+    "cubism_sdk": "5-r.4",
+    "cubism_core": "5.1.0 vendor binary, not project-authored source",
+    "mnn_revision": "3b04761b4a8f0ab60dad259f94771f19d1264475",
+    "model_files": 16,
+    "model_payload_bytes": 1428706334,
+    "model_weights_project_authored_source": false
+  },
+  "device_tests": {
+    "provision": true,
+    "poem103": true,
+    "api": true
+  },
+  "package_device_install_verified_at_finalize": false,
+  "historical_snapshot": "provenance/source-completeness-pre-beta2.json",
+  "public_verification": "../../docs/verification/beta38.json",
+  "extra_hashes_computed": false,
+  "main_application_upgrade": {
+    "verified": true,
+    "version_code": 38,
+    "data_preserved": true,
+    "model_files_preserved": 16,
+    "go_connection_verified": true
+  }
+}

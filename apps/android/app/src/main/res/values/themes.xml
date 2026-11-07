@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.PRTS" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowBackground">@color/bg_deep</item>
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorOnPrimary">@color/bg_deep</item>
+        <item name="android:statusBarColor">@color/bg_deep</item>
+        <item name="android:navigationBarColor">@color/bg_deep</item>
+    </style>
+
+    <style name="PRTS.Button" parent="Widget.Material3.Button">
+        <item name="android:textColor">@color/bg_deep</item>
+        <item name="backgroundTint">@color/accent</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="cornerRadius">28dp</item>
+    </style>
+
+    <style name="PRTS.IconBtn" parent="Widget.Material3.Button.IconButton">
+        <item name="iconTint">@color/text_sub</item>
+    </style>
+</resources>

@@ -1,0 +1,17 @@
+{
+  "hello": {
+    "text_file": "hello.txt"
+  },
+  "poem": {
+    "text_file": "poem.txt"
+  },
+  "chat_a": {
+    "text_file": "chat_a.txt"
+  },
+  "chat_b": {
+    "text_file": "chat_b.txt"
+  },
+  "chat_c": {
+    "text_file": "chat_c.txt"
+  }
+}

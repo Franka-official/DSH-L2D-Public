@@ -1,0 +1,60 @@
+{
+  "revision": "317c12d4e0da83847b594fcf8bd74bf2c76615ec",
+  "files": [
+    {
+      "path": "model/slow_ar_int8.onnx",
+      "bytes": 4820700
+    },
+    {
+      "path": "model/slow_ar_int8.onnx.data",
+      "bytes": 133471232
+    },
+    {
+      "path": "model/fast_ar_int8.onnx",
+      "bytes": 511306
+    },
+    {
+      "path": "model/fast_ar_int8.onnx.data",
+      "bytes": 36718592
+    },
+    {
+      "path": "model/codec_decoder_fp16.onnx",
+      "bytes": 594319,
+      "role": "explicit-legacy-graph"
+    },
+    {
+      "path": "model/codec_decoder_fp16.onnx.data",
+      "bytes": 260741440,
+      "role": "shared-codec-weights"
+    },
+    {
+      "path": "model/runtime_manifest.json",
+      "bytes": 1424
+    },
+    {
+      "path": "model/config.json",
+      "bytes": 2651
+    },
+    {
+      "path": "model/tokenizer/tokenizer.json",
+      "bytes": 5852397
+    },
+    {
+      "path": "model/codec_incremental.onnx",
+      "bytes": 552824,
+      "role": "locally-derived-incremental-graph"
+    }
+  ],
+  "source_hf_revision": "317c12d4e0da83847b594fcf8bd74bf2c76615ec",
+  "codec_variant": "incremental-causal-state-v1",
+  "derived_graph": {
+    "path": "model/codec_incremental.onnx",
+    "origin": "locally-derived-from-pinned-source-graph",
+    "source_hf_revision": "317c12d4e0da83847b594fcf8bd74bf2c76615ec",
+    "variant": "incremental-causal-state-v1",
+    "shared_weights": "model/codec_decoder_fp16.onnx.data",
+    "state_tensors": 36,
+    "causal_attention_window": 128,
+    "history_frame_replay": 0
+  }
+}

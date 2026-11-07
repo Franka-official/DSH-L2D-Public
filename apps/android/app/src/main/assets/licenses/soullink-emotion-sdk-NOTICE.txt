@@ -1,0 +1,18 @@
+Adapted core: soullink-emotion-sdk
+Upstream repository: https://github.com/nanlingyin/soullink-emotion-sdk
+Fixed revision: 02cd75ac0a085a87d84d1a885f1b33eca8742d53
+License: Apache License, Version 2.0; full upstream text is supplied in
+soullink-emotion-sdk-LICENSE.txt in this same directory.
+
+The Kotlin EmotionStateController adapts the upstream EmotionStateController.ts,
+EmotionPresetRegistry.ts, VADState.ts, EmotionIntent.ts, seededRandom.ts,
+clamp.ts and lerp.ts core equations and preset data.
+
+Android adaptation changes:
+- A slower mobile personality and deterministic fixed-step active clock.
+- Foreground pause/resume, optional classification policy and per-reply deduplication.
+- Separate persistent VAD mood, short reaction envelope and manual presentation priority.
+- Translation to five bounded muscle weights for the existing native model renderer.
+
+This application does not run or redistribute the complete upstream SDK as an
+unchanged library. The native rendering and manual model expressions remain separate.

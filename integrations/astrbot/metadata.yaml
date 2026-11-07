@@ -1,0 +1,8 @@
+name: astrbot_plugin_live2d_call
+display_name: Live2D手机通话
+desc: 手机专用口语风格与七种语义表情提示，保留现有人格和工具权限。
+version: v1.0.1
+author: local
+astrbot_version: ">=4.29.3,<4.30"
+support_platforms:
+  - webchat

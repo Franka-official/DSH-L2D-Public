@@ -1,0 +1,11 @@
+{
+  "schema": "prts-clean-android36-source-staging-v1",
+  "source_complete": false,
+  "fresh_clone_buildable": false,
+  "build_performed": false,
+  "host_source_entries": 121,
+  "host_source_bytes": 674248,
+  "frozen36_overlay_sources_byte_equal": 16,
+  "historical_only": true,
+  "context": "Initial staging snapshot, superseded by the portable beta38 source build and automated device checks."
+}

@@ -1,0 +1,12 @@
+{
+  "schema": "dsh-mnn-product-patch-v1",
+  "upstream_revision": "3b04761b4a8f0ab60dad259f94771f19d1264475",
+  "source": "native-provenance/sampler-selected",
+  "retained_hunks_reverse_verified": true,
+  "only_runtime_and_public_cpp_header_patched": true,
+  "prefix_and_benchmark_diagnostic_calls_removed": true,
+  "mixed_sampler_streaming_cancel_and_natural_eos_preserved": true,
+  "native_source_fresh_compilation_pending": true,
+  "device_quality_revalidation_pending": true,
+  "removed_diagnostic_lines": 21
+}

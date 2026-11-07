@@ -1,0 +1,54 @@
+--- current-mnn/transformers/llm/engine/src/omni.cpp
++++ candidate-sampler-mnn/transformers/llm/engine/src/omni.cpp
+@@ -3044,7 +3044,13 @@
+         mQwen3AudioCodePredictorEmbedding.reset(
+             new DiskEmbedding(mConfig, mConfig->audio_code_predictor_embedding_file(), hiddenSize));
+         mMaxNewTokens = mConfig->talker_max_new_tokens();
+-        set_config("{\"sampler_type\":\"greedy\"}");
++        // Sampling is required: greedy decoding falls into repetition/silence
++        // loops for many speaker embeddings (the official Python defaults are
++        // temperature 0.9 / top_k 50 / top_p 1.0 / repetition_penalty 1.05).
++        set_config(
++            "{\"sampler_type\": \"mixed\", \"mixed_samplers\": [\"penalty\", \"topK\", \"topP\", \"temperature\"], "
++            "\"temperature\": 0.9, \"top_k\": 50, \"top_p\": 1.0, \"repetition_penalty\": 1.05, "
++            "\"penalty_window\": 64}");
+         mSampler.reset(Sampler::createSampler(mContext, mConfig));
+         mContext->status = LlmStatus::RUNNING;
+         return true;
+@@ -3591,6 +3597,36 @@
+     }
+     std::vector<int> codecPrefix(inputIds.begin(), inputIds.begin() + 6);
+     std::vector<int> textIds(inputIds.begin() + 6, inputIds.end());
++    // Test-only conformance trace; does not alter prefix construction or tokenization.
++    if (std::getenv("PRTS_QWEN_TTS_PREFIX_DIAG")) {
++        std::ostringstream diag;
++        diag << "PRTS_QWEN_PREFIX_DIAG {\"event\":\"qwen_tts_prefix_diag\",\"language\":\""
++             << (codecPrefix.size() >= 3 && codecPrefix[2] == 2055 ? "chinese" : "unknown")
++             << "\",\"prefix_mode\":\"legacy_template\",\"tokenizer_first_six\":[";
++        for (size_t i = 0; i < std::min<size_t>(6, inputIds.size()); ++i) {
++            if (i) diag << ',';
++            diag << inputIds[i];
++        }
++        diag << "],\"used_codec_prefix\":[";
++        for (size_t i = 0; i < codecPrefix.size(); ++i) {
++            if (i) diag << ',';
++            diag << codecPrefix[i];
++        }
++        diag << "],\"text_token_count\":" << textIds.size()
++             << ",\"sampler_type\":\"" << mConfig->sampler_type() << "\",\"mixed_samplers\":[";
++        const auto samplers = mConfig->mixed_samplers();
++        for (size_t i = 0; i < samplers.size(); ++i) {
++            if (i) diag << ',';
++            diag << '\"' << samplers[i] << '\"';
++        }
++        diag << "],\"temperature\":" << mConfig->temperature()
++             << ",\"top_k\":" << mConfig->topK()
++             << ",\"top_p\":" << mConfig->topP()
++             << ",\"repetition_penalty\":" << mConfig->repetition_penalty()
++             << ",\"penalty_window\":" << mConfig->penalty_window() << '}';
++        MNN_PRINT("%s\n", diag.str().c_str());
++    }
++
+     std::vector<int> ttsIds{mConfig->tts_bos_token_id(), mConfig->tts_eos_token_id(), mConfig->tts_pad_token_id()};
+     VARP speakerEmbedding = nullptr;
+     if (!refAudio.empty()) {

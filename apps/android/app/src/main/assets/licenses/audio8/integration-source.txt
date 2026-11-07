@@ -1,0 +1,2 @@
+Audio8 model/runtime revision 317c12d4e0da83847b594fcf8bd74bf2c76615ec. Android wrapper and tokenizer bridge are local source ports. ONNX Runtime Android 1.28.2 is isolated from the MNN runtime. The model/reference files are not embedded in this test APK.
+codec_incremental.onnx is a locally derived causal-state graph, variant incremental-causal-state-v1, from source HF revision 317c12d4e0da83847b594fcf8bd74bf2c76615ec. It reuses codec_decoder_fp16.onnx.data and is not claimed to be an unmodified upstream graph.

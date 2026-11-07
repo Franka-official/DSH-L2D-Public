@@ -1,0 +1,16 @@
+DSH L2D motion source module
+
+adapter/dsh-performance.ts and build.cjs are project-owned source. Their
+license scope follows the repository's root LICENSE and COPYING.
+
+upstream/soullink contains the runtime and type sources used from
+https://github.com/nanlingyin/soullink-emotion-sdk
+revision 02cd75ac0a085a87d84d1a885f1b33eca8742d53.
+These files retain the upstream Apache License 2.0; see
+upstream/soullink/LICENSE. SOURCE-MANIFEST.json records the selected inputs.
+
+esbuild 0.25.12 is a build-time dependency obtained through npm. It is not
+vendored as a native binary in this module.
+
+Character profiles and native/Kotlin code are outside this build. The script
+only produces the performance JavaScript bundle.

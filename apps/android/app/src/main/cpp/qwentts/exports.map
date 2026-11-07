@@ -1,0 +1,4 @@
+{
+  global: JNI_OnLoad; Java_com_prts_client_audio_qwen_QwenTtsNative_*;
+  local: *;
+};

@@ -1,0 +1,323 @@
+{
+  "upstream": "https://github.com/nanlingyin/soullink-emotion-sdk",
+  "revision": "02cd75ac0a085a87d84d1a885f1b33eca8742d53",
+  "upstream_license": "Apache-2.0",
+  "adapter_license": "AGPL-3.0-only",
+  "source_files": [
+    {
+      "path": "adapter/dsh-performance.ts",
+      "bytes": 12649,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/emotion/EmotionPresetRegistry.ts",
+      "bytes": 1477,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/emotion/EmotionStateController.ts",
+      "bytes": 9748,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/emotion/ProactiveController.ts",
+      "bytes": 7102,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/emotion/ReflectionPulseController.ts",
+      "bytes": 6845,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/emotion/VADExpressionMapper.ts",
+      "bytes": 5314,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/emotion/VADGestureController.ts",
+      "bytes": 13906,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/emotion/VADMicroMotionController.ts",
+      "bytes": 6453,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/emotion/VADPrivateParameterOverlay.ts",
+      "bytes": 24007,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/emotion/VADState.ts",
+      "bytes": 288,
+      "runtime_metafile_input": false
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/expression/ActionUnitSolver.ts",
+      "bytes": 4963,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/expression/EmotionArchetype.ts",
+      "bytes": 855,
+      "runtime_metafile_input": false
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/expression/EmotionArchetypeRegistry.ts",
+      "bytes": 10132,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/expression/ExpressionTimeline.ts",
+      "bytes": 1644,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/expression/RuntimeExpressionGenerator.ts",
+      "bytes": 9494,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/facs/ActionUnitUtils.ts",
+      "bytes": 2079,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/facs/defaultActionUnitState.ts",
+      "bytes": 973,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/facs/defaultFACSState.ts",
+      "bytes": 665,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/facs/FACSActionUnitState.ts",
+      "bytes": 4328,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/facs/FACSLikeState.ts",
+      "bytes": 660,
+      "runtime_metafile_input": false
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/facs/FACSUtils.ts",
+      "bytes": 3032,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/idle/BlinkController.ts",
+      "bytes": 2415,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/idle/BodySwayController.ts",
+      "bytes": 4183,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/idle/BreathingController.ts",
+      "bytes": 1255,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/idle/GazeController.ts",
+      "bytes": 2529,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/idle/IdleActionScheduler.ts",
+      "bytes": 18943,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/idle/IdleBiasController.ts",
+      "bytes": 862,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/idle/IdleEngine.ts",
+      "bytes": 3662,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/idle/MicroMotionController.ts",
+      "bytes": 1223,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/mixer/LayeredParameterMixer.ts",
+      "bytes": 857,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/mixer/MotionMixer.ts",
+      "bytes": 3220,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/mixer/PriorityRules.ts",
+      "bytes": 314,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/profile/CapabilityDetector.ts",
+      "bytes": 755,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/profile/deriveProfileDefaults.ts",
+      "bytes": 3363,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/profile/FallbackStrategy.ts",
+      "bytes": 1043,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/profile/ModelProfile.ts",
+      "bytes": 3941,
+      "runtime_metafile_input": false
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/profile/ModelProfileAdapter.ts",
+      "bytes": 4365,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/profile/ModelProfileSchema.ts",
+      "bytes": 4413,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/profile/NativeAnimationResolver.ts",
+      "bytes": 3434,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/profile/ParameterTransform.ts",
+      "bytes": 2868,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/reaction/ActionPlanSequencer.ts",
+      "bytes": 2099,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/reaction/EmotionIntent.ts",
+      "bytes": 290,
+      "runtime_metafile_input": false
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/reaction/MessageReactionClassifier.ts",
+      "bytes": 2548,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/reaction/ParameterPlanSequencer.ts",
+      "bytes": 3549,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/reaction/ReactionSequencer.ts",
+      "bytes": 1381,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/reaction/RecoveryController.ts",
+      "bytes": 987,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/reaction/SoullinkPlan.ts",
+      "bytes": 1393,
+      "runtime_metafile_input": false
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/runtime/MotionStyle.ts",
+      "bytes": 4140,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/runtime/SoullinkRuntime.ts",
+      "bytes": 30992,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/speech/AudioLevelAnalyzer.ts",
+      "bytes": 788,
+      "runtime_metafile_input": false
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/speech/LipSyncController.ts",
+      "bytes": 5802,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/speech/MockSpeechController.ts",
+      "bytes": 170,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/speech/SpeechPerformancePlanner.ts",
+      "bytes": 48781,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/speech/VoiceWaitingMotionController.ts",
+      "bytes": 20117,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/state/CharacterState.ts",
+      "bytes": 92,
+      "runtime_metafile_input": false
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/state/CharacterStateMachine.ts",
+      "bytes": 663,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/utils/clamp.ts",
+      "bytes": 209,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/utils/easing.ts",
+      "bytes": 394,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/utils/lerp.ts",
+      "bytes": 103,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/utils/randomRange.ts",
+      "bytes": 371,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/utils/seededRandom.ts",
+      "bytes": 245,
+      "runtime_metafile_input": true
+    },
+    {
+      "path": "upstream/soullink/packages/engine/src/utils/smoothing.ts",
+      "bytes": 290,
+      "runtime_metafile_input": true
+    }
+  ],
+  "runtime_input_count": 54,
+  "type_only_source_count": 8,
+  "upstream_sources_modified": false,
+  "profile_assets_copied": false,
+  "stable_source_label_prefix": "public_access_20261103/soullink-native-integration"
+}

@@ -1,0 +1,533 @@
+{
+  "schema": "prts-host36-whitelisted-source-snapshot-v1",
+  "phase": "snapshot_metadata",
+  "project": "/path/to/workspace/android-reviewed-20261030",
+  "output": "/path/to/workspace/dsh-go-20261104/release36-source-snapshot.zip",
+  "state": "/path/to/workspace/dsh-go-20261104/release36-source-snapshot/state.json",
+  "selected_entries": 121,
+  "selected_text_bytes": 674248,
+  "maximum_text_bytes": 1000000,
+  "maximum_zip_bytes": 2000000,
+  "source_complete": false,
+  "fresh_clone_buildable": false,
+  "production_written": false,
+  "device_or_network_operations": false,
+  "hashes_computed": false,
+  "missing_optional_fixed_paths": [
+    "build.gradle",
+    "build.gradle.kts",
+    "settings.gradle.kts",
+    "app/build.gradle.kts"
+  ],
+  "deferred_direct_asset_logic": [],
+  "excluded": [
+    "all SDK/Cubism implementation trees",
+    "all models and weight/config payload directories",
+    "all photos/images/audio/video/roles/backgrounds",
+    "all .so/.a/JAR/AAR/binaries",
+    "all build/cache/userdata",
+    "local.properties",
+    "signing.env",
+    "key properties/keystores/credentials",
+    "all assets except individually --include-logic approved own JS/JSON",
+    "all other cpp source until explicitly approved",
+    "all androidTest/test trees"
+  ],
+  "started_at": "2026-11-04T14:24:46.091641+00:00",
+  "exported": [
+    {
+      "path": "app/build.gradle",
+      "bytes": 3779
+    },
+    {
+      "path": "app/src/main/AndroidManifest.xml",
+      "bytes": 3050
+    },
+    {
+      "path": "app/src/main/cpp/CMakeLists.txt",
+      "bytes": 1077
+    },
+    {
+      "path": "app/src/main/cpp/prts_live2d.cpp",
+      "bytes": 64409
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/audio/BilingualSpeechPolicy.kt",
+      "bytes": 2140
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/audio/LocalSpeechAudio.kt",
+      "bytes": 595
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/audio/LocalSpeechText.kt",
+      "bytes": 2424
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/audio/LocalVoiceSettings.kt",
+      "bytes": 2194
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/audio/MicRecorder.kt",
+      "bytes": 3881
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/audio/OfflineSpeechRouter.kt",
+      "bytes": 19130
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/audio/PcmBufferPolicy.kt",
+      "bytes": 3309
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/audio/PcmSpeechPlayer.kt",
+      "bytes": 18239
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/audio/SpeechPlayer.kt",
+      "bytes": 9200
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/audio/SpeechTempo.kt",
+      "bytes": 866
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/audio/cosy/CharacterVoicePolicy.kt",
+      "bytes": 472
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/audio/cosy/CosyVoiceLanguagePolicy.kt",
+      "bytes": 1578
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/audio/cosy/CosyVoiceSettings.kt",
+      "bytes": 1713
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/audio/cosy/FixedSpeechCache.kt",
+      "bytes": 5260
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/audio/cosy/FlowBackendPolicy.kt",
+      "bytes": 2045
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/audio/cosy/JapaneseReading.kt",
+      "bytes": 2620
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/audio/cosy/MnnNativeBindings.kt",
+      "bytes": 1206
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/audio/cosy/OfflineCosyVoiceEngine.kt",
+      "bytes": 29091
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/audio/cosy/OwnedVoiceInstallPolicy.kt",
+      "bytes": 1344
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/audio/qwen/BundledQwenModelInstaller.kt",
+      "bytes": 11251
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/audio/qwen/OfflineQwenTtsEngine.kt",
+      "bytes": 12254
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/audio/qwen/QwenModelLayout.kt",
+      "bytes": 3659
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/audio/qwen/QwenTtsNative.kt",
+      "bytes": 1064
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/face/FaceObservation.kt",
+      "bytes": 7870
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/face/FaceTrackerFixture.kt",
+      "bytes": 5109
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/face/LocalFaceTracker.kt",
+      "bytes": 10773
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/face/Yuv420Sampler.kt",
+      "bytes": 4049
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/live2d/CanvasRenderPolicy.kt",
+      "bytes": 1323
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/live2d/Live2DView.kt",
+      "bytes": 57587
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/live2d/PresentationPolicy.kt",
+      "bytes": 4378
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/live2d/SoullinkJsEngine.kt",
+      "bytes": 12799
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/localdsh/LocalDshBridge.kt",
+      "bytes": 11867
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/localdsh/LocalDshBridgeService.kt",
+      "bytes": 3324
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/localdsh/LocalDshClient.kt",
+      "bytes": 1334
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/localdsh/LocalDshConnectActivity.kt",
+      "bytes": 4685
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/localdsh/LocalDshGrantStore.kt",
+      "bytes": 2159
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/localdsh/LocalDshHub.kt",
+      "bytes": 10286
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/localdsh/LocalDshPcmWav.kt",
+      "bytes": 1146
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/net/ConnectionSettings.kt",
+      "bytes": 15926
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/net/Proto.kt",
+      "bytes": 3591
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/net/ServicePairingClient.kt",
+      "bytes": 6917
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/net/WsClient.kt",
+      "bytes": 10188
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/ui/AutoMotionDirector.kt",
+      "bytes": 20031
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/ui/BackdropBlur.kt",
+      "bytes": 2108
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/ui/BubbleAdapter.kt",
+      "bytes": 2465
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/ui/CallActivity.kt",
+      "bytes": 54585
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/ui/CallCameraController.kt",
+      "bytes": 20319
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/ui/CallOpeningPolicy.kt",
+      "bytes": 1470
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/ui/CharacterPlacementEditor.kt",
+      "bytes": 8012
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/ui/CharacterPresentationStore.kt",
+      "bytes": 833
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/ui/ChatActivity.kt",
+      "bytes": 433
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/ui/CosyVoiceReviewActivity.kt",
+      "bytes": 16160
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/ui/DirectCharacterPlacementController.kt",
+      "bytes": 4703
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/ui/EmotionStateController.kt",
+      "bytes": 22249
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/ui/Frosted.kt",
+      "bytes": 3171
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/ui/PlacementGesturePolicy.kt",
+      "bytes": 4585
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/ui/Prefs.kt",
+      "bytes": 1267
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/ui/PresentationTransform.kt",
+      "bytes": 470
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/ui/StartActivity.kt",
+      "bytes": 33832
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/ui/StreamingCaptionController.kt",
+      "bytes": 4591
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/ui/VisibleCallCamera.kt",
+      "bytes": 17244
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/ui/assets/BackgroundImagePolicy.kt",
+      "bytes": 1033
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/ui/assets/BackgroundLibrary.kt",
+      "bytes": 8422
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/ui/assets/BackgroundPresenter.kt",
+      "bytes": 2250
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/ui/assets/CharacterArchive.kt",
+      "bytes": 3909
+    },
+    {
+      "path": "app/src/main/java/com/prts/client/ui/assets/CharacterLibrary.kt",
+      "bytes": 9268
+    },
+    {
+      "path": "app/src/main/res/drawable/frosted_capsule.xml",
+      "bytes": 434
+    },
+    {
+      "path": "app/src/main/res/drawable/frosted_circle.xml",
+      "bytes": 381
+    },
+    {
+      "path": "app/src/main/res/drawable/frosted_circle_danger.xml",
+      "bytes": 391
+    },
+    {
+      "path": "app/src/main/res/drawable/frosted_panel.xml",
+      "bytes": 438
+    },
+    {
+      "path": "app/src/main/res/drawable/frosted_pill.xml",
+      "bytes": 432
+    },
+    {
+      "path": "app/src/main/res/drawable/ic_avatar_placeholder.xml",
+      "bytes": 926
+    },
+    {
+      "path": "app/src/main/res/drawable/launcher_icon_foreground.xml",
+      "bytes": 329
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_bg_aurora.xml",
+      "bytes": 1100
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_bubble_in.xml",
+      "bytes": 409
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_bubble_out.xml",
+      "bytes": 407
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_bubble_translation.xml",
+      "bytes": 352
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_chip.xml",
+      "bytes": 246
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_chip_selected.xml",
+      "bytes": 301
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_glass_button.xml",
+      "bytes": 386
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_glass_danger.xml",
+      "bytes": 386
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_glass_panel.xml",
+      "bytes": 308
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_ic_action.xml",
+      "bytes": 530
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_ic_add.xml",
+      "bytes": 390
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_ic_camera.xml",
+      "bytes": 607
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_ic_camera_flip.xml",
+      "bytes": 478
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_ic_close.xml",
+      "bytes": 317
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_ic_hangup.xml",
+      "bytes": 499
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_ic_mic.xml",
+      "bytes": 654
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_ic_phone.xml",
+      "bytes": 503
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_ic_send.xml",
+      "bytes": 423
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_ic_settings.xml",
+      "bytes": 622
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_input_surface.xml",
+      "bytes": 246
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_scrim_bottom.xml",
+      "bytes": 242
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_scrim_top.xml",
+      "bytes": 211
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_send_button.xml",
+      "bytes": 309
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_sheet_handle.xml",
+      "bytes": 185
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_sheet_surface.xml",
+      "bytes": 345
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_start_scrim.xml",
+      "bytes": 242
+    },
+    {
+      "path": "app/src/main/res/drawable/ui_status_dot.xml",
+      "bytes": 228
+    },
+    {
+      "path": "app/src/main/res/layout/activity_call.xml",
+      "bytes": 10877
+    },
+    {
+      "path": "app/src/main/res/layout/activity_start.xml",
+      "bytes": 3363
+    },
+    {
+      "path": "app/src/main/res/layout/item_bubble.xml",
+      "bytes": 1574
+    },
+    {
+      "path": "app/src/main/res/layout/sheet_settings.xml",
+      "bytes": 12118
+    },
+    {
+      "path": "app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+      "bytes": 274
+    },
+    {
+      "path": "app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml",
+      "bytes": 274
+    },
+    {
+      "path": "app/src/main/res/mipmap-anydpi/ic_launcher.xml",
+      "bytes": 200
+    },
+    {
+      "path": "app/src/main/res/mipmap-anydpi/ic_launcher_round.xml",
+      "bytes": 200
+    },
+    {
+      "path": "app/src/main/res/values/colors.xml",
+      "bytes": 791
+    },
+    {
+      "path": "app/src/main/res/values/launcher_icon_colors.xml",
+      "bytes": 123
+    },
+    {
+      "path": "app/src/main/res/values/strings.xml",
+      "bytes": 412
+    },
+    {
+      "path": "app/src/main/res/values/themes.xml",
+      "bytes": 905
+    },
+    {
+      "path": "app/src/main/res/values/ui_editor_ids.xml",
+      "bytes": 254
+    },
+    {
+      "path": "app/src/main/res/values/ui_refresh.xml",
+      "bytes": 391
+    },
+    {
+      "path": "app/src/main/res/xml/call_image_paths.xml",
+      "bytes": 172
+    },
+    {
+      "path": "gradle.properties",
+      "bytes": 188
+    },
+    {
+      "path": "settings.gradle",
+      "bytes": 1304
+    }
+  ],
+  "withheld_configs": [],
+  "source_metadata_before_after_unchanged": true,
+  "snapshot_scope": "approved current host text only; not complete build/source/assets",
+  "known_missing_release_inputs": [
+    "Gradle wrapper/distribution",
+    "SDK/NDK and portable dependency provenance",
+    "correct sampler-only MNN/native source and reproducible link recipe",
+    "required native binaries or their complete build inputs",
+    "models/assets and their separate licensing/provisioning"
+  ]
+}

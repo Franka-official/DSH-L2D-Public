@@ -1,0 +1,6 @@
+.native-deps/
+.cxx/
+app/.cxx/
+app/src/main/assets/moss_encoder/
+**/*.p12
+**/store.pass

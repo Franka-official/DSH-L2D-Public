@@ -1,0 +1,50 @@
+{
+  "enabled": {
+    "description": "启用",
+    "type": "bool",
+    "default": true
+  },
+  "relay_url": {
+    "description": "中继地址",
+    "type": "string",
+    "default": ""
+  },
+  "verification_code": {
+    "description": "一次性配对码",
+    "type": "string",
+    "default": ""
+  },
+  "allowed_profile_ids": {
+    "description": "手机专用配置 ID（非 default）",
+    "type": "list",
+    "default": []
+  },
+  "allowed_api_principals": {
+    "description": "手机专用 API 身份（非密钥）",
+    "type": "list",
+    "default": []
+  },
+  "character_label": {
+    "description": "角色名称",
+    "type": "string",
+    "default": "鲸鱼娘"
+  },
+  "expressions_enabled": {
+    "description": "表情",
+    "type": "bool",
+    "default": true
+  },
+  "expression_tags": {
+    "description": "表情标签",
+    "type": "list",
+    "default": [
+      "neutral",
+      "happy",
+      "sad",
+      "angry",
+      "surprised",
+      "thinking",
+      "shy"
+    ]
+  }
+}

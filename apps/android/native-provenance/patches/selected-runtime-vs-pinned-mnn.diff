@@ -1,0 +1,1289 @@
+--- a/transformers/llm/engine/src/omni.cpp
++++ b/transformers/llm/engine/src/omni.cpp
+@@ -22,6 +22,7 @@
+ #include <MNN/expr/ExecutorScope.hpp>
+ #include "core/AttentionMaskConvention.hpp"
+ #include "omni.hpp"
++#include "qwen3_tts_bench_diag.hpp"
+ #include "kvmeta.hpp"
+ #include "llmconfig.hpp"
+ #include "tokenizer/tokenizer.hpp"
+@@ -326,6 +327,8 @@
+     if (!speakerEncoder || refAudio.empty()) {
+         return nullptr;
+     }
++    PrtsQwenBench::Stage prtsReferenceTotal("reference_load_resample_mel_speaker_total");
++    PrtsQwenBench::Stage prtsLoadMel("reference_load_resample_mel");
+     auto audioData = MNN::AUDIO::load(refAudio, sampleRate, 0, -1, MNN::AUDIO::RESAMPLE_SOXR_HQ);
+     auto waveform = audioData.first;
+     if (waveform.get() == nullptr || !waveform->getInfo() || audioData.second != sampleRate) {
+@@ -363,12 +366,17 @@
+         MNN_ERROR("[Error]: failed to build Qwen3-TTS ref mel\n");
+         return nullptr;
+     }
++    prtsLoadMel.finish();
++    PrtsQwenBench::Stage prtsSpeaker("speaker_encoder_including_existing_readback");
+     auto outputs = speakerEncoder->onForward({_Unsqueeze(mel, {0})});
+     if (outputs.size() != 1) {
+         MNN_ERROR("[Error]: Qwen3-TTS speaker encoder output size mismatch: %zu\n", outputs.size());
+         return nullptr;
+     }
++    PrtsQwenBench::tensor("speaker_encoder", "before_existing_readback", outputs[0]);
+     auto speakerValues = readTensorVector<float>(outputs[0]);
++    prtsSpeaker.finish();
++    PrtsQwenBench::tensor("speaker_encoder", "after_existing_readback", outputs[0]);
+     if (speakerValues.size() != hiddenSize) {
+         MNN_ERROR("[Error]: invalid Qwen3-TTS speaker embedding size: %zu\n", speakerValues.size());
+         return nullptr;
+@@ -2850,9 +2858,17 @@
+         MNN_ERROR("[Error]: Qwen3-TTS chat template produced empty prompt\n");
+         return false;
+     }
++    mTalker->setTtsCancelCallback(mTtsCancelCallback);
++    mTalker->setTtsProgressCallback(mTtsProgressCallback);
++    mTalker->configureTtsStreaming(mTtsChunkFrames, mTtsLeftContextFrames);
+     bool ok = mTalker->generateQwen3TTS(prompt, max_new_tokens, ref_audio);
++    mTalker->setTtsCancelCallback({});
++    mTalker->setTtsProgressCallback({});
+     const auto* talkerContext = mTalker->getContext();
+     if (talkerContext) {
++        mContext->tts_codec_eos = talkerContext->tts_codec_eos;
++        mContext->tts_cancel_observed = talkerContext->tts_cancel_observed;
++        mContext->tts_pcm_frames = talkerContext->tts_pcm_frames;
+         mContext->prompt_len = talkerContext->prompt_len;
+         mContext->gen_seq_len = talkerContext->gen_seq_len;
+         mContext->prefill_us = talkerContext->prefill_us;
+@@ -2972,8 +2988,14 @@
+             cpScheduleConfig.backendConfig = &cpBackendConfig;
+             if (auxScheduleConfig.type != MNN_FORWARD_CPU) {
+                 cpScheduleConfig.type = MNN_FORWARD_CPU;
+-                cpScheduleConfig.numThread = mConfig->thread_num();
+-            }
++                // Optional benchmark scheduling separation; absent key keeps official behavior.
++                cpScheduleConfig.numThread = mConfig->config_.value("qwen3_tts_cp_cpu_threads", mConfig->thread_num());
++                if (cpScheduleConfig.numThread <= 0) {
++                    MNN_ERROR("[Error]: qwen3_tts_cp_cpu_threads must be positive\n");
++                    return false;
++                }
++            }
++            PrtsQwenBench::cpuPredictorSchedule(cpScheduleConfig.numThread);
+             mQwen3CpRuntimeManager.reset(Executor::RuntimeManager::createRuntimeManager(cpScheduleConfig));
+             setRuntimeHint(mQwen3CpRuntimeManager, true);
+             mQwen3CpRuntimeManager->setHintPtr(Interpreter::KVCACHE_INFO, mQwen3CpMeta.get());
+@@ -3022,7 +3044,13 @@
+         mQwen3AudioCodePredictorEmbedding.reset(
+             new DiskEmbedding(mConfig, mConfig->audio_code_predictor_embedding_file(), hiddenSize));
+         mMaxNewTokens = mConfig->talker_max_new_tokens();
+-        set_config("{\"sampler_type\":\"greedy\"}");
++        // Sampling is required: greedy decoding falls into repetition/silence
++        // loops for many speaker embeddings (the official Python defaults are
++        // temperature 0.9 / top_k 50 / top_p 1.0 / repetition_penalty 1.05).
++        set_config(
++            "{\"sampler_type\": \"mixed\", \"mixed_samplers\": [\"penalty\", \"topK\", \"topP\", \"temperature\"], "
++            "\"temperature\": 0.9, \"top_k\": 50, \"top_p\": 1.0, \"repetition_penalty\": 1.05, "
++            "\"penalty_window\": 64}");
+         mSampler.reset(Sampler::createSampler(mContext, mConfig));
+         mContext->status = LlmStatus::RUNNING;
+         return true;
+@@ -3516,6 +3544,19 @@
+ 
+ bool Talker::generateQwen3TTS(const std::string& prompt, int maxFrames, const std::string& refAudio) {
+     CHECK_LLM_RUNNING_RET(mContext, false);
++    mContext->tts_codec_eos = false;
++    mContext->tts_cancel_observed = false;
++    mContext->tts_pcm_frames = 0;
++    mContext->gen_seq_len = 0;
++    auto cancelled = [&]() {
++        if (mTtsCancelCallback && mTtsCancelCallback()) {
++            mContext->tts_cancel_observed = true;
++            mContext->status = LlmStatus::USER_CANCEL;
++            return true;
++        }
++        return false;
++    };
++    if (cancelled()) return false;
+     MNN::Express::ExecutorScope s(mExecutor);
+     if (!isQwen3TTSTalker(mConfig)) {
+         MNN_ERROR("[Error]: generateQwen3TTS called on non-qwen3_tts talker\n");
+@@ -3556,6 +3597,36 @@
+     }
+     std::vector<int> codecPrefix(inputIds.begin(), inputIds.begin() + 6);
+     std::vector<int> textIds(inputIds.begin() + 6, inputIds.end());
++    // Test-only conformance trace; does not alter prefix construction or tokenization.
++    if (std::getenv("PRTS_QWEN_TTS_PREFIX_DIAG")) {
++        std::ostringstream diag;
++        diag << "PRTS_QWEN_PREFIX_DIAG {\"event\":\"qwen_tts_prefix_diag\",\"language\":\""
++             << (codecPrefix.size() >= 3 && codecPrefix[2] == 2055 ? "chinese" : "unknown")
++             << "\",\"prefix_mode\":\"legacy_template\",\"tokenizer_first_six\":[";
++        for (size_t i = 0; i < std::min<size_t>(6, inputIds.size()); ++i) {
++            if (i) diag << ',';
++            diag << inputIds[i];
++        }
++        diag << "],\"used_codec_prefix\":[";
++        for (size_t i = 0; i < codecPrefix.size(); ++i) {
++            if (i) diag << ',';
++            diag << codecPrefix[i];
++        }
++        diag << "],\"text_token_count\":" << textIds.size()
++             << ",\"sampler_type\":\"" << mConfig->sampler_type() << "\",\"mixed_samplers\":[";
++        const auto samplers = mConfig->mixed_samplers();
++        for (size_t i = 0; i < samplers.size(); ++i) {
++            if (i) diag << ',';
++            diag << '\"' << samplers[i] << '\"';
++        }
++        diag << "],\"temperature\":" << mConfig->temperature()
++             << ",\"top_k\":" << mConfig->topK()
++             << ",\"top_p\":" << mConfig->topP()
++             << ",\"repetition_penalty\":" << mConfig->repetition_penalty()
++             << ",\"penalty_window\":" << mConfig->penalty_window() << '}';
++        MNN_PRINT("%s\n", diag.str().c_str());
++    }
++
+     std::vector<int> ttsIds{mConfig->tts_bos_token_id(), mConfig->tts_eos_token_id(), mConfig->tts_pad_token_id()};
+     VARP speakerEmbedding = nullptr;
+     if (!refAudio.empty()) {
+@@ -3573,6 +3644,7 @@
+         return false;
+ #endif
+     }
++    if (cancelled()) return false;
+     auto codecEmbeds = makeQwen3TTSCodecEmbeds(mDiskEmbedding.get(), codecPrefix, speakerEmbedding, hiddenSize);
+     auto textRawEmbeds = makeEmbeddingInput(mQwen3TextEmbedding.get(), textIds, mConfig->talker_text_hidden_size());
+     auto ttsRawEmbeds = makeEmbeddingInput(mQwen3TextEmbedding.get(), ttsIds, mConfig->talker_text_hidden_size());
+@@ -3624,6 +3696,7 @@
+     mMeta->remove = mMeta->previous;
+     mMeta->add    = seqLen;
+     MNN::Timer prefillTimer;
++    if (cancelled()) return false;
+     auto talkerOutputs = mModule->onForward({prefillEmbeds, talkerMask, talkerPos});
+     mContext->prefill_us += prefillTimer.durationInUs();
+     mMeta->sync();
+@@ -3632,6 +3705,9 @@
+         mContext->status = LlmStatus::INTERNAL_ERROR;
+         return false;
+     }
++
++    PrtsQwenBench::tensor("talker_prefill_logits", "after_original_forward", talkerOutputs[0]);
++    PrtsQwenBench::tensor("talker_prefill_hidden", "after_original_forward", talkerOutputs[1]);
+ 
+     // Decode-step inputs: fixed shapes, only the position value changes per frame.
+     VARP decodeMask = buildAttentionMask(talkerMaskRequest(1), backendType);
+@@ -3655,10 +3731,63 @@
+         cpDecodePos = makeTensorInput<int>({1, 1});
+     }
+ 
++    // The official tokenizer's chunked_decode uses a causal left context and
++    // removes exactly context_frames * total_upsample samples. Here the same
++    // operation runs while codec generation is still in progress (not after WAV).
++    int emittedFrames = 0;
++    int samplesPerFrame = 0;
++    int64_t incrementalAudioUs = 0;
++    auto emitFrames = [&](int endFrame, bool final) -> bool {
++        if (cancelled()) return false;
++        if (endFrame == emittedFrames) {
++            if (mTtsProgressCallback) mTtsProgressCallback(endFrame, final);
++            return !final || mWavformCallback(nullptr, 0, true);
++        }
++        const int contextFrames = std::min(emittedFrames, std::max(0, mTtsLeftContextFrames));
++        const int beginFrame = emittedFrames - contextFrames;
++        const int decodeFrames = endFrame - beginFrame;
++        auto codes = makeTensorInput<int>({1, codeGroups, decodeFrames});
++        auto ptr = codes->writeMap<int>();
++        for (int g = 0; g < codeGroups; ++g) for (int t = 0; t < decodeFrames; ++t)
++            ptr[g * decodeFrames + t] = generatedCodes[(beginFrame + t) * codeGroups + g];
++        MNN::Timer audioTimer;
++        auto outputs = mQwen3SpeechDecoder->onForward({codes});
++        if (outputs.size() != 1 || !outputs[0]->getInfo() || !outputs[0]->readMap<float>()) {
++            mContext->status = LlmStatus::INTERNAL_ERROR; return false;
++        }
++        const auto* info = outputs[0]->getInfo();
++        const int count = info->size;
++        const int ratio = count / decodeFrames;
++        if (ratio <= 0 || count % decodeFrames || (samplesPerFrame && ratio != samplesPerFrame)) {
++            MNN_ERROR("[Error]: inconsistent qwen3_tts streaming upsample: %d / %d\n", count, decodeFrames);
++            mContext->status = LlmStatus::INTERNAL_ERROR; return false;
++        }
++        samplesPerFrame = ratio;
++        const float* pcm = outputs[0]->readMap<float>() + contextFrames * ratio;
++        const int freshSamples = (endFrame - emittedFrames) * ratio;
++        const int64_t audioUs = audioTimer.durationInUs();
++        incrementalAudioUs += audioUs;
++        mContext->audio_us += audioUs;
++        if (cancelled()) return false;
++        if (mTtsProgressCallback) mTtsProgressCallback(endFrame, final);
++        if (!mWavformCallback(pcm, freshSamples, final)) {
++            mContext->status = LlmStatus::USER_CANCEL; return false;
++        }
++        emittedFrames = endFrame;
++        mContext->tts_pcm_frames = emittedFrames;
++        return true;
++    };
+     MNN::Timer decodeTimer;
++    bool prtsObservedCodecEos = false;
+     for (int step = 0; step < maxFrames; ++step) {
++        if (cancelled()) return false;
+         int firstCode = mSampler->sample(talkerOutputs[0], firstCodeCandidates);
++        if (step == 0) {
++            PrtsQwenBench::tensor("talker_prefill_logits", "after_existing_sample", talkerOutputs[0]);
++        }
+         if (firstCode == codecEosToken) {
++            prtsObservedCodecEos = true;
++            mContext->tts_codec_eos = true;
+             break;
+         }
+         if (firstCode < 0) {
+@@ -3671,6 +3800,7 @@
+         frameCodes[0] = firstCode;
+         if (cpIncremental) {
+             auto talkerHidden = readTensorVector<float>(talkerOutputs[1]);
++            if (step == 0) PrtsQwenBench::tensor("talker_prefill_hidden", "after_existing_readback", talkerOutputs[1]);
+             if (talkerHidden.size() != hiddenSize) {
+                 MNN_ERROR("[Error]: invalid qwen3_tts talker hidden size at frame %d: %zu\n", step,
+                           talkerHidden.size());
+@@ -3692,8 +3822,10 @@
+                 return false;
+             }
+             int token = sample(cpOutputs[0], 0, 2048);
++            if (step == 0) PrtsQwenBench::tensor("code_predictor_prefill", "after_existing_sample", cpOutputs[0]);
+             frameCodes[1] = token < 0 ? 0 : token;
+             for (int group = 2; group < codeGroups; ++group) {
++                if (cancelled()) return false;
+                 auto cpStep    = makeTensorInput<float>({1, 1, hiddenSize});
+                 auto stepPtr   = cpStep->writeMap<float>();
+                 mQwen3AudioCodePredictorEmbedding->embedding(
+@@ -3714,6 +3846,7 @@
+             }
+         } else {
+             for (int group = 1; group < codeGroups; ++group) {
++                if (cancelled()) return false;
+                 auto audioCodePredictorEmbeds =
+                     makeQwen3AudioCodePredictorCodecEmbeds(mDiskEmbedding.get(), mQwen3AudioCodePredictorEmbedding.get(),
+                                                       frameCodes, codeGroups,
+@@ -3733,12 +3866,16 @@
+                     return false;
+                 }
+                 int token = sample(cpOutputs[0], (group - 1) * 2048, 2048);
++                if (step == 0 && group == 1) PrtsQwenBench::tensor("code_predictor_full", "after_existing_sample", cpOutputs[0]);
+                 frameCodes[group] = token < 0 ? 0 : token;
+             }
+         }
+         generatedCodes.insert(generatedCodes.end(), frameCodes.begin(), frameCodes.end());
+         mContext->output_tokens.insert(mContext->output_tokens.end(), frameCodes.begin(), frameCodes.end());
+         mContext->gen_seq_len = step + 1;
++        if (mTtsChunkFrames > 0 && step + 1 - emittedFrames >= mTtsChunkFrames) {
++            if (!emitFrames(step + 1, false)) return false;
++        }
+ 
+         if (step + 1 >= maxFrames) {
+             break;
+@@ -3775,15 +3912,32 @@
+             mContext->status = LlmStatus::INTERNAL_ERROR;
+             return false;
+         }
++        if (step == 0) {
++            PrtsQwenBench::tensor("talker_decode_logits", "after_original_forward", talkerOutputs[0]);
++            PrtsQwenBench::tensor("talker_decode_hidden", "after_original_forward", talkerOutputs[1]);
++        }
+         seqLen += 1;
+     }
+-    mContext->decode_us += decodeTimer.durationInUs();
++    mContext->decode_us += std::max<int64_t>(0, decodeTimer.durationInUs() - incrementalAudioUs);
+ 
+     int frames = static_cast<int>(generatedCodes.size() / codeGroups);
++    PrtsQwenBench::generationEnd(frames, maxFrames, prtsObservedCodecEos);
++    if (!prtsObservedCodecEos) {
++        // A frame cap is incomplete speech. Do not decode a giant capped tensor
++        // or emit a fake final chunk. Already streamed PCM remains partial.
++        mContext->status = LlmStatus::MAX_TOKENS_FINISHED;
++        return false;
++    }
++    if (cancelled()) return false;
+     if (frames <= 0) {
+         MNN_ERROR("[Error]: no qwen3_tts codec frame generated\n");
+         mContext->status = LlmStatus::INTERNAL_ERROR;
+         return false;
++    }
++    if (mTtsChunkFrames > 0) {
++        const bool ok = emitFrames(frames, true);
++        if (ok) mContext->status = LlmStatus::NORMAL_FINISHED;
++        return ok;
+     }
+     auto decoderCodes = makeTensorInput<int>({1, codeGroups, frames});
+     auto codePtr = decoderCodes->writeMap<int>();
+@@ -3793,6 +3947,7 @@
+         }
+     }
+ 
++    PrtsQwenBench::Stage prtsDecoderReady("speech_decoder_including_existing_readback");
+     MNN::Timer wavTimer;
+     auto wavOutputs = mQwen3SpeechDecoder->onForward({decoderCodes});
+     mContext->audio_us += wavTimer.durationInUs();
+@@ -3801,8 +3956,13 @@
+         mContext->status = LlmStatus::INTERNAL_ERROR;
+         return false;
+     }
++    prtsDecoderReady.finish();
++    PrtsQwenBench::tensor("speech_decoder", "after_existing_readback", wavOutputs[0]);
+     auto info = wavOutputs[0]->getInfo();
++    if (cancelled()) return false;
++    if (mTtsProgressCallback) mTtsProgressCallback(frames, true);
+     bool callbackOk = mWavformCallback(wavOutputs[0]->readMap<float>(), info->size, true);
++    if (callbackOk) mContext->tts_pcm_frames = frames;
+     mContext->status = callbackOk ? LlmStatus::NORMAL_FINISHED : LlmStatus::USER_CANCEL;
+     return callbackOk;
+ }
+--- a/transformers/llm/engine/include/llm/llm.hpp
++++ b/transformers/llm/engine/include/llm/llm.hpp
+@@ -1,319 +1,334 @@
+-//
+-//  llm.hpp
+-//
+-//  Created by MNN on 2023/08/25.
+-//  ZhaodeWang
+-//
+-
+-#ifndef LLM_hpp
+-#define LLM_hpp
+-
+-#include <vector>
+-#include <memory>
+-#include <mutex>
+-#include <string>
+-#include <fstream>
+-#include <sstream>
+-#include <iostream>
+-#include <streambuf>
+-#include <functional>
+-#include <unordered_map>
+-
+-#include <MNN/expr/Expr.hpp>
+-#include <MNN/expr/Module.hpp>
+-#include <MNN/expr/MathOp.hpp>
+-#include <MNN/expr/NeuralNetWorkOp.hpp>
+-#include <MNN/expr/ExecutorScope.hpp>
+-
+-#include "attention_mask.hpp"
+-
+-namespace MNN {
+-struct KVMeta;
+-namespace Transformer {
+-using MNN::KVMeta;
+-
+-// ChatMessage: pair<role, content> for multi-turn conversation.
+-//   first  = role: "system", "user", "assistant", "tool", etc.
+-//   second = content: plain text message content.
+-// For complex messages (tool_calls, reasoning_content, etc.):
+-//   first  = "json"
+-//   second = full JSON object string, e.g. {"role":"assistant","content":"","tool_calls":[...]}
+-using ChatMessage = std::pair<std::string, std::string>;
+-using ChatMessages = std::vector<ChatMessage>;
+-class Tokenizer;
+-class Pipeline;
+-class LlmConfig;
+-class DiskEmbedding;
+-class Sampler;
+-class Generation;
+-class EagleGeneration;
+-struct TimePerformance;
+-#define CHECK_LLM_RUNNING_RET(ctx, ret)                         \
+-{                                                               \
+-    if ((ctx)->status == LlmStatus::NOT_LOADED ||               \
+-    (ctx)->status == LlmStatus::INTERNAL_ERROR ||               \
+-    (ctx)->status == LlmStatus::TIMEOUT ||                      \
+-    (ctx)->status == LlmStatus::USER_CANCEL) {                  \
+-        MNN_ERROR("[Error]: LLM in error state. Status: %d\n", \
+-                  static_cast<int>((ctx)->status));             \
+-        return (ret);                                           \
+-    }                                                           \
+-}
+-#define CHECK_LLM_RUNNING(ctx)                                  \
+-{                                                               \
+-    if ((ctx)->status == LlmStatus::NOT_LOADED ||               \
+-    (ctx)->status == LlmStatus::INTERNAL_ERROR ||               \
+-    (ctx)->status == LlmStatus::TIMEOUT ||                      \
+-    (ctx)->status == LlmStatus::USER_CANCEL) {                  \
+-        MNN_ERROR("[Error]: LLM in error state. Status: %d\n", \
+-                  static_cast<int>((ctx)->status));             \
+-        return;                                                 \
+-    }                                                           \
+-}
+-
+-struct MNN_PUBLIC PromptImagePart {
+-    MNN::Express::VARP image_data;
+-    int width;
+-    int height;
+-};
+-
+-struct MNN_PUBLIC PromptAudioPart {
+-    std::string file_path;
+-    MNN::Express::VARP waveform;
+-};
+-
+-struct MNN_PUBLIC PromptVideoPart {
+-    // file_path is decoded and sampled by Omni using the model video_fps/video_max_frames config.
+-    std::string file_path;
+-    // In-memory frames are expected to be already sampled in chronological order; timestamps, when provided,
+-    // are seconds for those sampled frames.
+-    std::vector<MNN::Express::VARP> frames;
+-    std::vector<float> timestamps;
+-    int width = 0;
+-    int height = 0;
+-    float fps = 2.0f;
+-    int max_frames = 768;
+-};
+-
+-struct MNN_PUBLIC MultimodalPrompt {
+-    std::string prompt_template;
+-    std::map<std::string, PromptImagePart> images;
+-    std::map<std::string, PromptAudioPart> audios;
+-    std::map<std::string, PromptVideoPart> videos;
+-};
+-
+-enum TuneType {
+-    // op encoder number for commit
+-    OP_ENCODER_NUMBER = 0,
+-};
+-enum class LlmStatus {
+-    NOT_LOADED = -1,
+-    RUNNING = 0,
+-    NORMAL_FINISHED = 1,
+-    MAX_TOKENS_FINISHED = 2,
+-    USER_CANCEL = 3,
+-    INTERNAL_ERROR = 4,
+-    TIMEOUT = 5,
+-};
+-enum class MatchStrictLevel : int;
+-enum class NgramSelectRule : int;
+-
+-struct LlmContext {
+-    // forward
+-    int prompt_len = 0;
+-    int gen_seq_len = 0;
+-    int all_seq_len = 0;
+-    std::ostream* os = nullptr;
+-    std::string end_with;
+-    // perf
+-    int64_t load_us = 0;
+-    int64_t vision_us = 0;
+-    int64_t audio_us = 0;
+-    int64_t prefill_us = 0;
+-    int64_t decode_us = 0;
+-    int64_t sample_us = 0;
+-    int64_t ttfa_us = 0;
+-    float pixels_mp = 0;
+-    float audio_input_s = 0;
+-    // tokens
+-    int current_token;
+-    std::vector<int> history_tokens;
+-    std::vector<int> output_tokens;
+-    std::string generate_str;
+-    // llm status
+-    LlmStatus status = LlmStatus::NOT_LOADED;
+-    // log buffer (per-instance, no locking needed)
+-    std::string log_buffer;
+-    // Guards history_tokens / output_tokens / generate_str / end_with against
+-    // concurrent access: the decode loop mutates them while other threads
+-    // (e.g. pymnn get_context) may read; unsynchronized vector/string
+-    // reallocation causes use-after-free.
+-    mutable std::mutex mutex;
+-};
+-struct GenerationParams;
+-class MNN_PUBLIC Llm {
+-public:
+-    enum Stage {
+-        Prefill,
+-        Decode
+-    };
+-    // Log buffer interface: retrieve accumulated log and clear the buffer.
+-    // Only effective when LLM_LOG_TO_STRING macro is enabled during compilation.
+-    std::string getLog();
+-    static Llm* createLLM(const std::string& config_path);
+-    static void destroy(Llm* llm);// For Windows RT mode should use destroy
+-    Llm(std::shared_ptr<LlmConfig> config);
+-    virtual ~Llm();
+-    virtual bool load();
+-    virtual Express::VARP gen_attention_mask(int seq_len);
+-    virtual Express::VARP gen_position_ids(int seq_len);
+-    virtual Express::VARP embedding(const std::vector<int>& input_ids);
+-    virtual int sample(Express::VARP logits, int offset = 0, int size = 0);
+-    std::vector<Express::VARP> getOutputs() const;
+-    int getOutputIndex(const std::string& name) const;
+-    void reset();
+-    void tuning(TuneType type, std::vector<int> candidates);
+-    virtual std::vector<Express::VARP> forwardRaw(Express::VARP hiddenState, Express::VARP mask, Express::VARP inputPos, Express::VARPS extraArgs = {});
+-    Express::VARP forward(const std::vector<int>& input_ids, bool is_prefill = true);
+-    Express::VARP forward(MNN::Express::VARP input_embeds);
+-    void switchMode(Stage stage);
+-    void setKVCacheInfo(size_t add, size_t remove, int* reserve = nullptr, int n_reserve = 0);
+-    size_t getCurrentHistory() const;
+-    void eraseHistory(size_t begin, size_t end);
+-    bool setPrefixCacheFile(const std::string& filename, int flag = 0);
+-    virtual void response(const std::vector<int>& input_ids, std::ostream* os = &std::cout, const char* end_with = nullptr, int max_new_tokens = -1);
+-    void response(const std::string& user_content, std::ostream* os = &std::cout, const char* end_with = nullptr, int max_new_tokens = -1);
+-    void response(const ChatMessages& chat_prompts, std::ostream* os = &std::cout, const char* end_with = nullptr, int max_new_tokens = -1);
+-    void response(MNN::Express::VARP input_embeds, std::ostream* os = &std::cout, const char* end_with = nullptr, int max_new_tokens = -1);
+-    virtual void generate_init(std::ostream* os = nullptr, const char* end_with = nullptr);
+-    void generate(int max_token);
+-    std::vector<int> generate(const std::vector<int>& input_ids, int max_new_tokens = -1);
+-    std::vector<int> generate(MNN::Express::VARP input_embeds, int max_tokens = -1);
+-    bool stoped();
+-    bool reuse_kv();
+-    // Prompt cache: call after decode completes to sync the cached text with the
+-    // full conversation (including assistant response). Optional — the cache
+-    // self-updates after generate(), but this allows callers with post-processed
+-    // response text (e.g. deleteThinkPart) to provide a more accurate version.
+-    void syncPromptCache(const ChatMessages& chat_prompts);
+-    // config function
+-    std::string dump_config();
+-    bool set_config(const std::string& content);
+-    void setDebugCallback(MNN::TensorCallBackWithInfo&& before, MNN::TensorCallBackWithInfo&& after);
+-    Llm* create_lora(const std::string& lora_path);
+-    // tokenier function
+-    bool is_stop(int token);
+-    std::string tokenizer_decode(int token);
+-    virtual std::vector<int> tokenizer_encode(const std::string& query);
+-    friend class Pipeline;
+-    virtual std::vector<int> tokenizer_encode(const MultimodalPrompt& multimodal_input);
+-    // ptompt functions
+-    std::string apply_chat_template(const std::string& user_content) const;
+-    std::string apply_chat_template(const ChatMessages& chat_prompts) const;
+-    void response(const MultimodalPrompt& multimodal_input,
+-                  std::ostream* os = &std::cout,
+-                  const char* end_with = nullptr,
+-                  int max_new_tokens = -1);
+-    const LlmContext* getContext() const {
+-        return mContext.get();
+-    }
+-    const std::shared_ptr<Express::Executor>& getExecutor() const {
+-        return mExecutor;
+-    }
+-    virtual void setWavformCallback(std::function<bool(const float*, size_t, bool)> callback) {}
+-    virtual void generateWavform() {}
+-    virtual bool generateTTS(const std::string& text, const std::string& language = "english", int max_new_tokens = -1,
+-                             const std::string& ref_audio = "");
+-
+-protected:
+-    void setChatTemplate();
+-    void initRuntime();
+-    void setRuntimeHint(std::shared_ptr<Express::Executor::RuntimeManager> &rtg, bool mllm = false);
+-    std::shared_ptr<LlmContext> mContext;
+-    std::shared_ptr<KVMeta> mMeta;
+-    std::shared_ptr<LlmConfig> mConfig;
+-    std::shared_ptr<Tokenizer> mTokenizer;
+-    std::shared_ptr<DiskEmbedding> mDiskEmbedding;
+-    std::shared_ptr<DiskEmbedding> mPleEmbedding;
+-    Express::VARP mPleInput; // PLE embeddings for current input
+-    Express::VARP mDeepstackInput; // deepstack placeholder for visual models
+-    Express::VARP mTextEmbedsForPle; // Pure text embeddings for PLE projection
+-    std::shared_ptr<Sampler> mSampler;
+-    std::shared_ptr<Express::Executor::RuntimeManager> mRuntimeManager, mProcessorRuntimeManager;
+-    std::shared_ptr<Express::Module> mModule;
+-    /**
+-     key: <seq_len, all_logists>
+-     value : module
+-     note: prefill share one module, seq_len = 100 for example
+-     */
+-    const int mPrefillKey = 100;
+-    std::map<std::pair<int, bool>, std::shared_ptr<Express::Module>> mModulePool;
+-    const Express::Module* mBaseModule = nullptr;
+-    Express::VARP inputsEmbeds, attentionMask, positionIds;
+-    std::vector<Express::VARP> mPositionIdsVarVec;
+-    MaskCache mMaskCache;  // reusable masks for the decode shapes
+-    Express::VARP logitsAllIdx, logitsLastIdx;
+-    int mSeqLenIndex = 0;
+-    std::shared_ptr<MNN::Express::Executor> mExecutor;
+-protected:
+-    friend class ArGeneration;
+-    friend class LookaheadGeneration;
+-    friend class MtpGeneration;
+-    friend class EagleGeneration;
+-    friend class DFlashGeneration;
+-    friend class Omni;
+-    std::vector<Express::VARP> forwardVec(const std::vector<int>& input_ids);
+-    std::vector<Express::VARP> forwardVec(MNN::Express::VARP input_embeds);
+-    // Readies a text-only re-prefill of input_ids; false when they cannot be embedded from token ids alone.
+-    virtual bool prepareHistoryReplay(const std::vector<int>& input_ids) {
+-        return true;
+-    }
+-private:
+-    std::shared_ptr<Generation> mGenerationStrategy;
+-    void setSpeculativeConfig();
+-    void updateContext(int seq_len, int gen_len);
+-    bool checkFile(const std::string& path, const char* name);
+-
+-private:
+-    bool mInSpec = false;
+-    int mDraftLength = 4;
+-    std::shared_ptr<GenerationParams> mGenerateParam;
+-    bool mAsync = true;
+-    int mBlockSize = 0;
+-    std::vector<int> mValidBlockSize;
+-    bool mPrefixCacheMode = false;
+-    std::string mPrefixCacheFileName;
+-    int mCallIndex;
+-    int mPrefixLength;
+-    bool mIsPrefixFileExist = false;
+-    int mPrefixCacheNums = 0;
+-    void completePrefixWrite();
+-    // -1 until the model graph is scanned on the first partial erase.
+-    int mHasLinearAttention = -1;
+-    bool replayKeptHistory(size_t begin, size_t end);
+-    // Prompt cache state
+-    std::string mCachedPromptText;
+-    void updateCachedPromptText(const ChatMessages& chat_prompts, size_t history_before);
+-};
+-
+-// Embedding start
+-class MNN_PUBLIC Embedding : public Llm {
+-public:
+-    Embedding(std::shared_ptr<LlmConfig> config);
+-    static Embedding* createEmbedding(const std::string& config_path, bool load = true);
+-    static float dist(Express::VARP var0, Express::VARP var1);
+-    static float cos_sim(Express::VARP var0, Express::VARP var1);
+-    virtual bool load() override;
+-
+-    virtual Express::VARP ids_embedding(const std::vector<int>& ids);
+-    Express::VARP txt_embedding(const std::string& txt);
+-    std::vector<Express::VARP> forwardRaw(Express::VARP hiddenState, Express::VARP mask, Express::VARP inputPos, Express::VARPS extraArgs = {}) override;
+-    int dim() const;
+-    virtual Express::VARP gen_attention_mask(int seq_len) override;
+-    virtual Express::VARP gen_position_ids(int seq_len) override;
+-};
+-// Embedding end
+-}
+-}
+-
+-#endif // LLM_hpp
++//
++//  llm.hpp
++//
++//  Created by MNN on 2023/08/25.
++//  ZhaodeWang
++//
++
++#ifndef LLM_hpp
++#define LLM_hpp
++
++#include <vector>
++#include <memory>
++#include <mutex>
++#include <string>
++#include <fstream>
++#include <sstream>
++#include <iostream>
++#include <streambuf>
++#include <functional>
++#include <unordered_map>
++
++#include <MNN/expr/Expr.hpp>
++#include <MNN/expr/Module.hpp>
++#include <MNN/expr/MathOp.hpp>
++#include <MNN/expr/NeuralNetWorkOp.hpp>
++#include <MNN/expr/ExecutorScope.hpp>
++
++#include "attention_mask.hpp"
++
++namespace MNN {
++struct KVMeta;
++namespace Transformer {
++using MNN::KVMeta;
++
++// ChatMessage: pair<role, content> for multi-turn conversation.
++//   first  = role: "system", "user", "assistant", "tool", etc.
++//   second = content: plain text message content.
++// For complex messages (tool_calls, reasoning_content, etc.):
++//   first  = "json"
++//   second = full JSON object string, e.g. {"role":"assistant","content":"","tool_calls":[...]}
++using ChatMessage = std::pair<std::string, std::string>;
++using ChatMessages = std::vector<ChatMessage>;
++class Tokenizer;
++class Pipeline;
++class LlmConfig;
++class DiskEmbedding;
++class Sampler;
++class Generation;
++class EagleGeneration;
++struct TimePerformance;
++#define CHECK_LLM_RUNNING_RET(ctx, ret)                         \
++{                                                               \
++    if ((ctx)->status == LlmStatus::NOT_LOADED ||               \
++    (ctx)->status == LlmStatus::INTERNAL_ERROR ||               \
++    (ctx)->status == LlmStatus::TIMEOUT ||                      \
++    (ctx)->status == LlmStatus::USER_CANCEL) {                  \
++        MNN_ERROR("[Error]: LLM in error state. Status: %d\n", \
++                  static_cast<int>((ctx)->status));             \
++        return (ret);                                           \
++    }                                                           \
++}
++#define CHECK_LLM_RUNNING(ctx)                                  \
++{                                                               \
++    if ((ctx)->status == LlmStatus::NOT_LOADED ||               \
++    (ctx)->status == LlmStatus::INTERNAL_ERROR ||               \
++    (ctx)->status == LlmStatus::TIMEOUT ||                      \
++    (ctx)->status == LlmStatus::USER_CANCEL) {                  \
++        MNN_ERROR("[Error]: LLM in error state. Status: %d\n", \
++                  static_cast<int>((ctx)->status));             \
++        return;                                                 \
++    }                                                           \
++}
++
++struct MNN_PUBLIC PromptImagePart {
++    MNN::Express::VARP image_data;
++    int width;
++    int height;
++};
++
++struct MNN_PUBLIC PromptAudioPart {
++    std::string file_path;
++    MNN::Express::VARP waveform;
++};
++
++struct MNN_PUBLIC PromptVideoPart {
++    // file_path is decoded and sampled by Omni using the model video_fps/video_max_frames config.
++    std::string file_path;
++    // In-memory frames are expected to be already sampled in chronological order; timestamps, when provided,
++    // are seconds for those sampled frames.
++    std::vector<MNN::Express::VARP> frames;
++    std::vector<float> timestamps;
++    int width = 0;
++    int height = 0;
++    float fps = 2.0f;
++    int max_frames = 768;
++};
++
++struct MNN_PUBLIC MultimodalPrompt {
++    std::string prompt_template;
++    std::map<std::string, PromptImagePart> images;
++    std::map<std::string, PromptAudioPart> audios;
++    std::map<std::string, PromptVideoPart> videos;
++};
++
++enum TuneType {
++    // op encoder number for commit
++    OP_ENCODER_NUMBER = 0,
++};
++enum class LlmStatus {
++    NOT_LOADED = -1,
++    RUNNING = 0,
++    NORMAL_FINISHED = 1,
++    MAX_TOKENS_FINISHED = 2,
++    USER_CANCEL = 3,
++    INTERNAL_ERROR = 4,
++    TIMEOUT = 5,
++};
++enum class MatchStrictLevel : int;
++enum class NgramSelectRule : int;
++
++struct LlmContext {
++    // forward
++    int prompt_len = 0;
++    int gen_seq_len = 0;
++    int all_seq_len = 0;
++    std::ostream* os = nullptr;
++    std::string end_with;
++    // perf
++    int64_t load_us = 0;
++    int64_t vision_us = 0;
++    int64_t audio_us = 0;
++    int64_t prefill_us = 0;
++    int64_t decode_us = 0;
++    int64_t sample_us = 0;
++    int64_t ttfa_us = 0;
++    float pixels_mp = 0;
++    float audio_input_s = 0;
++    // tokens
++    int current_token;
++    std::vector<int> history_tokens;
++    std::vector<int> output_tokens;
++    std::string generate_str;
++    // llm status
++    LlmStatus status = LlmStatus::NOT_LOADED;
++    // PRTS: actual codec/EOS/cancellation evidence, owned by the generation worker.
++    bool tts_codec_eos = false;
++    bool tts_cancel_observed = false;
++    int tts_pcm_frames = 0;
++    // log buffer (per-instance, no locking needed)
++    std::string log_buffer;
++    // Guards history_tokens / output_tokens / generate_str / end_with against
++    // concurrent access: the decode loop mutates them while other threads
++    // (e.g. pymnn get_context) may read; unsynchronized vector/string
++    // reallocation causes use-after-free.
++    mutable std::mutex mutex;
++};
++struct GenerationParams;
++class MNN_PUBLIC Llm {
++public:
++    enum Stage {
++        Prefill,
++        Decode
++    };
++    // Log buffer interface: retrieve accumulated log and clear the buffer.
++    // Only effective when LLM_LOG_TO_STRING macro is enabled during compilation.
++    std::string getLog();
++    static Llm* createLLM(const std::string& config_path);
++    static void destroy(Llm* llm);// For Windows RT mode should use destroy
++    Llm(std::shared_ptr<LlmConfig> config);
++    virtual ~Llm();
++    virtual bool load();
++    virtual Express::VARP gen_attention_mask(int seq_len);
++    virtual Express::VARP gen_position_ids(int seq_len);
++    virtual Express::VARP embedding(const std::vector<int>& input_ids);
++    virtual int sample(Express::VARP logits, int offset = 0, int size = 0);
++    std::vector<Express::VARP> getOutputs() const;
++    int getOutputIndex(const std::string& name) const;
++    void reset();
++    void tuning(TuneType type, std::vector<int> candidates);
++    virtual std::vector<Express::VARP> forwardRaw(Express::VARP hiddenState, Express::VARP mask, Express::VARP inputPos, Express::VARPS extraArgs = {});
++    Express::VARP forward(const std::vector<int>& input_ids, bool is_prefill = true);
++    Express::VARP forward(MNN::Express::VARP input_embeds);
++    void switchMode(Stage stage);
++    void setKVCacheInfo(size_t add, size_t remove, int* reserve = nullptr, int n_reserve = 0);
++    size_t getCurrentHistory() const;
++    void eraseHistory(size_t begin, size_t end);
++    bool setPrefixCacheFile(const std::string& filename, int flag = 0);
++    virtual void response(const std::vector<int>& input_ids, std::ostream* os = &std::cout, const char* end_with = nullptr, int max_new_tokens = -1);
++    void response(const std::string& user_content, std::ostream* os = &std::cout, const char* end_with = nullptr, int max_new_tokens = -1);
++    void response(const ChatMessages& chat_prompts, std::ostream* os = &std::cout, const char* end_with = nullptr, int max_new_tokens = -1);
++    void response(MNN::Express::VARP input_embeds, std::ostream* os = &std::cout, const char* end_with = nullptr, int max_new_tokens = -1);
++    virtual void generate_init(std::ostream* os = nullptr, const char* end_with = nullptr);
++    void generate(int max_token);
++    std::vector<int> generate(const std::vector<int>& input_ids, int max_new_tokens = -1);
++    std::vector<int> generate(MNN::Express::VARP input_embeds, int max_tokens = -1);
++    bool stoped();
++    bool reuse_kv();
++    // Prompt cache: call after decode completes to sync the cached text with the
++    // full conversation (including assistant response). Optional — the cache
++    // self-updates after generate(), but this allows callers with post-processed
++    // response text (e.g. deleteThinkPart) to provide a more accurate version.
++    void syncPromptCache(const ChatMessages& chat_prompts);
++    // config function
++    std::string dump_config();
++    bool set_config(const std::string& content);
++    void setDebugCallback(MNN::TensorCallBackWithInfo&& before, MNN::TensorCallBackWithInfo&& after);
++    Llm* create_lora(const std::string& lora_path);
++    // tokenier function
++    bool is_stop(int token);
++    std::string tokenizer_decode(int token);
++    virtual std::vector<int> tokenizer_encode(const std::string& query);
++    friend class Pipeline;
++    virtual std::vector<int> tokenizer_encode(const MultimodalPrompt& multimodal_input);
++    // ptompt functions
++    std::string apply_chat_template(const std::string& user_content) const;
++    std::string apply_chat_template(const ChatMessages& chat_prompts) const;
++    void response(const MultimodalPrompt& multimodal_input,
++                  std::ostream* os = &std::cout,
++                  const char* end_with = nullptr,
++                  int max_new_tokens = -1);
++    const LlmContext* getContext() const {
++        return mContext.get();
++    }
++    const std::shared_ptr<Express::Executor>& getExecutor() const {
++        return mExecutor;
++    }
++    virtual void setWavformCallback(std::function<bool(const float*, size_t, bool)> callback) {}
++    virtual void generateWavform() {}
++    // These callbacks are installed/cleared on the same serialized generation worker.
++    // The cancellation predicate may read an external atomic, never reset the runtime.
++    void setTtsCancelCallback(std::function<bool()> callback) { mTtsCancelCallback = std::move(callback); }
++    void setTtsProgressCallback(std::function<void(int, bool)> callback) { mTtsProgressCallback = std::move(callback); }
++    void configureTtsStreaming(int chunkFrames, int leftContextFrames = 25) {
++        mTtsChunkFrames = chunkFrames; mTtsLeftContextFrames = leftContextFrames;
++    }
++    virtual bool generateTTS(const std::string& text, const std::string& language = "english", int max_new_tokens = -1,
++                             const std::string& ref_audio = "");
++
++protected:
++    std::function<bool()> mTtsCancelCallback;
++    std::function<void(int, bool)> mTtsProgressCallback;
++    int mTtsChunkFrames = 0;
++    int mTtsLeftContextFrames = 25;
++    void setChatTemplate();
++    void initRuntime();
++    void setRuntimeHint(std::shared_ptr<Express::Executor::RuntimeManager> &rtg, bool mllm = false);
++    std::shared_ptr<LlmContext> mContext;
++    std::shared_ptr<KVMeta> mMeta;
++    std::shared_ptr<LlmConfig> mConfig;
++    std::shared_ptr<Tokenizer> mTokenizer;
++    std::shared_ptr<DiskEmbedding> mDiskEmbedding;
++    std::shared_ptr<DiskEmbedding> mPleEmbedding;
++    Express::VARP mPleInput; // PLE embeddings for current input
++    Express::VARP mDeepstackInput; // deepstack placeholder for visual models
++    Express::VARP mTextEmbedsForPle; // Pure text embeddings for PLE projection
++    std::shared_ptr<Sampler> mSampler;
++    std::shared_ptr<Express::Executor::RuntimeManager> mRuntimeManager, mProcessorRuntimeManager;
++    std::shared_ptr<Express::Module> mModule;
++    /**
++     key: <seq_len, all_logists>
++     value : module
++     note: prefill share one module, seq_len = 100 for example
++     */
++    const int mPrefillKey = 100;
++    std::map<std::pair<int, bool>, std::shared_ptr<Express::Module>> mModulePool;
++    const Express::Module* mBaseModule = nullptr;
++    Express::VARP inputsEmbeds, attentionMask, positionIds;
++    std::vector<Express::VARP> mPositionIdsVarVec;
++    MaskCache mMaskCache;  // reusable masks for the decode shapes
++    Express::VARP logitsAllIdx, logitsLastIdx;
++    int mSeqLenIndex = 0;
++    std::shared_ptr<MNN::Express::Executor> mExecutor;
++protected:
++    friend class ArGeneration;
++    friend class LookaheadGeneration;
++    friend class MtpGeneration;
++    friend class EagleGeneration;
++    friend class DFlashGeneration;
++    friend class Omni;
++    std::vector<Express::VARP> forwardVec(const std::vector<int>& input_ids);
++    std::vector<Express::VARP> forwardVec(MNN::Express::VARP input_embeds);
++    // Readies a text-only re-prefill of input_ids; false when they cannot be embedded from token ids alone.
++    virtual bool prepareHistoryReplay(const std::vector<int>& input_ids) {
++        return true;
++    }
++private:
++    std::shared_ptr<Generation> mGenerationStrategy;
++    void setSpeculativeConfig();
++    void updateContext(int seq_len, int gen_len);
++    bool checkFile(const std::string& path, const char* name);
++
++private:
++    bool mInSpec = false;
++    int mDraftLength = 4;
++    std::shared_ptr<GenerationParams> mGenerateParam;
++    bool mAsync = true;
++    int mBlockSize = 0;
++    std::vector<int> mValidBlockSize;
++    bool mPrefixCacheMode = false;
++    std::string mPrefixCacheFileName;
++    int mCallIndex;
++    int mPrefixLength;
++    bool mIsPrefixFileExist = false;
++    int mPrefixCacheNums = 0;
++    void completePrefixWrite();
++    // -1 until the model graph is scanned on the first partial erase.
++    int mHasLinearAttention = -1;
++    bool replayKeptHistory(size_t begin, size_t end);
++    // Prompt cache state
++    std::string mCachedPromptText;
++    void updateCachedPromptText(const ChatMessages& chat_prompts, size_t history_before);
++};
++
++// Embedding start
++class MNN_PUBLIC Embedding : public Llm {
++public:
++    Embedding(std::shared_ptr<LlmConfig> config);
++    static Embedding* createEmbedding(const std::string& config_path, bool load = true);
++    static float dist(Express::VARP var0, Express::VARP var1);
++    static float cos_sim(Express::VARP var0, Express::VARP var1);
++    virtual bool load() override;
++
++    virtual Express::VARP ids_embedding(const std::vector<int>& ids);
++    Express::VARP txt_embedding(const std::string& txt);
++    std::vector<Express::VARP> forwardRaw(Express::VARP hiddenState, Express::VARP mask, Express::VARP inputPos, Express::VARPS extraArgs = {}) override;
++    int dim() const;
++    virtual Express::VARP gen_attention_mask(int seq_len) override;
++    virtual Express::VARP gen_position_ids(int seq_len) override;
++};
++// Embedding end
++}
++}
++
++#endif // LLM_hpp
+--- a/transformers/llm/engine/CMakeLists.txt
++++ b/transformers/llm/engine/CMakeLists.txt
+@@ -111,6 +111,7 @@
+     add_executable(rollback_demo ${CMAKE_CURRENT_LIST_DIR}/demo/rollback_demo.cpp)
+     if (MNN_BUILD_AUDIO)
+         add_executable(qwen3_tts_demo ${CMAKE_CURRENT_LIST_DIR}/demo/qwen3_tts_demo.cpp)
++        add_executable(prts_qwen3_tts_bench ${CMAKE_CURRENT_LIST_DIR}/demo/prts_qwen3_tts_bench.cpp)
+     endif()
+     FILE(GLOB TOKENIZER_SRCS ${CMAKE_CURRENT_LIST_DIR}/src/tokenizer/*.cpp)
+     add_executable(tokenizer_demo ${CMAKE_CURRENT_LIST_DIR}/demo/tokenizer_demo.cpp ${TOKENIZER_SRCS})
+@@ -131,6 +132,8 @@
+     target_link_libraries(rollback_demo ${LLM_DEPS})
+     if (MNN_BUILD_AUDIO)
+         target_link_libraries(qwen3_tts_demo ${LLM_DEPS})
++        target_link_libraries(prts_qwen3_tts_bench ${LLM_DEPS})
++        target_compile_options(prts_qwen3_tts_bench PRIVATE -fexceptions)
+     endif()
+     target_link_libraries(tokenizer_demo ${LLM_DEPS})
+ endif()
+@@ -206,3 +209,6 @@
+ target_link_libraries(mls PRIVATE ${LLM_DEPS})
+ target_compile_definitions(mls PRIVATE CPPHTTPLIB_OPENSSL_SUPPORT)
+ endif()
++
++# PRTS_ISOLATED_QWEN_APP_JNI_20261103
++include("${DSH_ANDROID_SOURCE_DIR}/app/src/main/cpp/qwentts/QwenTtsJni.cmake")
+--- a/transformers/llm/engine/src/qwen3_tts_bench_diag.hpp
++++ b/transformers/llm/engine/src/qwen3_tts_bench_diag.hpp
+@@ -0,0 +1,88 @@
++// Diagnostic-only additions for the pinned official MNN Qwen3-TTS path.
++// No extra tensor evaluation/readMap, operator callbacks, or sampling changes.
++#ifndef PRTS_QWEN3_TTS_BENCH_DIAG_HPP
++#define PRTS_QWEN3_TTS_BENCH_DIAG_HPP
++#include <chrono>
++#include <cstdio>
++#include <cstdlib>
++#include <sstream>
++#include <string>
++#include <MNN/expr/Expr.hpp>
++#include "core/TensorUtils.hpp"
++
++namespace PrtsQwenBench {
++using Clock = std::chrono::steady_clock;
++inline bool enabled() {
++    const char* value = std::getenv("PRTS_QWEN_BENCH_DIAG");
++    return value && std::string(value) == "1";
++}
++inline std::string quote(const std::string& value) {
++    std::string result = "\"";
++    for (unsigned char c : value) {
++        if (c == '"' || c == '\\') { result += '\\'; result += char(c); }
++        else if (c < 32) { char escaped[7]; std::snprintf(escaped, sizeof(escaped), "\\u%04x", c); result += escaped; }
++        else result += char(c);
++    }
++    return result + "\"";
++}
++inline std::string caseId() {
++    const char* value = std::getenv("PRTS_QWEN_DIAG_CASE");
++    return value ? value : "load";
++}
++inline void emit(const std::string& fields) {
++    if (!enabled()) return;
++    const std::string line = "{\"event\":\"qwen_native_diag\",\"case\":" + quote(caseId()) + "," + fields + "}\n";
++    std::fwrite(line.data(), 1, line.size(), stderr);
++    std::fflush(stderr);
++}
++inline void tensor(const char* component, const char* phase, const MNN::Express::VARP& value) {
++    if (!enabled()) return;
++    const MNN::Tensor* output = value.get() ? value->getTensor() : nullptr;
++    int backendType = -1;
++    bool deviceNonzero = false;
++    std::ostringstream shape;
++    shape << '[';
++    if (output) {
++        auto description = MNN::TensorUtils::getDescribeOrigin(output);
++        auto backend = description ? description->getBackend() : nullptr;
++        if (backend) backendType = static_cast<int>(backend->type());
++        deviceNonzero = output->deviceId() != 0;
++        for (int i = 0; i < output->dimensions(); ++i) {
++            if (i) shape << ',';
++            shape << output->length(i);
++        }
++    }
++    shape << ']';
++    emit("\"kind\":\"output_tensor\",\"component\":" + quote(component) +
++         ",\"phase\":" + quote(phase) + ",\"tensorPresent\":" + (output ? "true" : "false") +
++         ",\"outputBackendType\":" + std::to_string(backendType) +
++         ",\"outputDeviceIdNonzero\":" + (deviceNonzero ? "true" : "false") +
++         ",\"shape\":" + shape.str() +
++         ",\"proofScope\":\"graph_output_allocation_not_every_internal_operator\"");
++}
++class Stage {
++public:
++    explicit Stage(const char* name) : name_(name), started_(Clock::now()) {}
++    void finish() {
++        if (finished_) return;
++        finished_ = true;
++        const double ms = std::chrono::duration<double, std::milli>(Clock::now() - started_).count();
++        emit("\"kind\":\"stage_wall_time\",\"stage\":" + quote(name_) + ",\"wallMs\":" + std::to_string(ms));
++    }
++    ~Stage() { finish(); }
++private:
++    const char* name_;
++    Clock::time_point started_;
++    bool finished_ = false;
++};
++inline void generationEnd(int frames, int cap, bool observedCodecEos) {
++    emit("\"kind\":\"codec_stop\",\"generatedFrames\":" + std::to_string(frames) +
++         ",\"maxFrames\":" + std::to_string(cap) + ",\"codecEosObserved\":" +
++         (observedCodecEos ? "true" : "false") + ",\"frameCapReached\":" + (frames >= cap ? "true" : "false"));
++}
++inline void cpuPredictorSchedule(int threads) {
++    emit("\"kind\":\"code_predictor_schedule\",\"backendType\":0,\"precision\":\"high\",\"cpuThreads\":" + std::to_string(threads) +
++         ",\"configuredScheduleOnly\":true");
++}
++} // namespace PrtsQwenBench
++#endif
+--- a/transformers/llm/engine/demo/prts_qwen3_tts_bench.cpp
++++ b/transformers/llm/engine/demo/prts_qwen3_tts_bench.cpp
+@@ -0,0 +1,179 @@
++// Thin benchmark of the official generateTTS path; no model/graph/precision changes.
++#include "llm/llm.hpp"
++#include <audio/audio.hpp>
++#include <chrono>
++#include <algorithm>
++#include <cmath>
++#include <cstdio>
++#include <cstdlib>
++#include <cstring>
++#include <fstream>
++#include <iomanip>
++#include <limits>
++#include <memory>
++#include <sstream>
++#include <stdexcept>
++#include <string>
++#include <vector>
++#include <fcntl.h>
++#include <unistd.h>
++
++using MNN::Transformer::Llm;
++using MNN::Transformer::LlmContext;
++using Clock = std::chrono::steady_clock;
++static constexpr int kSampleRate = 24000;
++
++static double ms(Clock::time_point a, Clock::time_point b) {
++    return std::chrono::duration<double, std::milli>(b - a).count();
++}
++static std::string quote(const std::string& s) {
++    std::string r = "\"";
++    for (unsigned char c : s) {
++        if (c == '"' || c == '\\') { r += '\\'; r += char(c); }
++        else if (c < 32) { char b[7]; std::snprintf(b, sizeof(b), "\\u%04x", c); r += b; }
++        else r += char(c);
++    }
++    return r + "\"";
++}
++static std::string number(double value) {
++    if (!std::isfinite(value)) return "null";
++    std::ostringstream s; s << std::fixed << std::setprecision(6) << value; return s.str();
++}
++static std::string readSmallFile(const char* path) {
++    std::ifstream f(path, std::ios::binary);
++    if (!f) throw std::runtime_error("cannot read text file");
++    std::string s((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
++    if (s.empty() || s.size() > 16384) throw std::runtime_error("text must be 1..16384 UTF-8 bytes");
++    return s;
++}
++static bool exists(const std::string& path) { std::ifstream f(path, std::ios::binary); return bool(f); }
++struct Counters {
++    int64_t prefill = 0, decode = 0, audio = 0;
++    explicit Counters(const LlmContext* c) {
++        if (c) { prefill=c->prefill_us; decode=c->decode_us; audio=c->audio_us; }
++    }
++};
++class JsonLines {
++public:
++    explicit JsonLines(const std::string& path) {
++        int fd = ::open(path.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
++        if (fd < 0) throw std::runtime_error("result exists or output parent is unavailable");
++        file_ = ::fdopen(fd, "w");
++        if (!file_) { ::close(fd); throw std::runtime_error("cannot open report stream"); }
++    }
++    ~JsonLines() { if (file_) std::fclose(file_); }
++    void emit(const std::string& line) {
++        std::puts(line.c_str()); std::fflush(stdout);
++        std::fprintf(file_, "%s\n", line.c_str()); std::fflush(file_);
++    }
++private:
++    FILE* file_ = nullptr;
++};
++
++int main(int argc, char** argv) {
++    const auto processStart = Clock::now();
++    if (argc != 10) {
++        std::fprintf(stderr, "Usage: %s <config.json> <utf8-text-file> <language> <reference.wav> <output-prefix> <label> <max-frames> <repeats> <tmp-dir>\n", argv[0]);
++        return 2;
++    }
++    try {
++        const std::string config=argv[1], text=readSmallFile(argv[2]), language=argv[3], refAudio=argv[4];
++        const std::string prefix=argv[5], label=argv[6], tmpDir=argv[9];
++        const int maxFrames=std::stoi(argv[7]), repeats=std::stoi(argv[8]);
++        if (maxFrames < 1 || maxFrames > 4096 || repeats < 1 || repeats > 8) throw std::runtime_error("invalid frame/repeat bound");
++        if (!exists(config) || !exists(refAudio)) throw std::runtime_error("config or reference file is absent");
++        for (int i=0; i<repeats; ++i) if (exists(prefix + "-" + std::to_string(i+1) + ".wav")) throw std::runtime_error("wave output already exists");
++        JsonLines report(prefix + ".jsonl");
++        auto emit=[&](const std::string& fields) { report.emit("{\"label\":"+quote(label)+",\"pid\":"+std::to_string(::getpid())+","+fields+"}"); };
++        ::setenv("PRTS_QWEN_BENCH_DIAG", "1", 1);
++        ::setenv("PRTS_QWEN_DIAG_CASE", "load", 1);
++        emit("\"event\":\"process_start\",\"textBytes\":"+std::to_string(text.size())+",\"language\":"+quote(language)+
++             ",\"maxFrames\":"+std::to_string(maxFrames)+",\"repeats\":"+std::to_string(repeats)+
++             ",\"callbackContract\":\"current_official_path_one_final_complete_waveform_not_streaming\",\"osCacheFlushed\":false");
++        const auto loadStart=Clock::now();
++        std::unique_ptr<Llm> llm(Llm::createLLM(config));
++        if (!llm) throw std::runtime_error("createLLM failed");
++        // Match the official demo's synchronous path. No backend/precision/thread override here.
++        if (!llm->set_config("{\"tmp_path\":" + quote(tmpDir) + ",\"async\":false}")) throw std::runtime_error("set_config failed");
++        if (!llm->load()) throw std::runtime_error("load failed");
++        const auto loadEnd=Clock::now();
++        emit("\"event\":\"loaded\",\"loadWallMs\":"+number(ms(loadStart,loadEnd))+
++             ",\"processElapsedMs\":"+number(ms(processStart,loadEnd)));
++        for (int iteration=1; iteration<=repeats; ++iteration) {
++            const std::string caseId=label+"-"+std::to_string(iteration);
++            ::setenv("PRTS_QWEN_DIAG_CASE", caseId.c_str(), 1);
++            std::vector<float> waveform;
++            int callbackCount=0;
++            size_t firstPayload=0;
++            bool sawFinal=false;
++            Clock::time_point firstPcm, lastPcm;
++            const Counters before(llm->getContext());
++            emit("\"event\":\"case_start\",\"iteration\":"+std::to_string(iteration)+
++                 ",\"phase\":"+quote(iteration==1 ? "new_process_first" : "same_process_repeat"));
++            Clock::time_point generateStart;
++            llm->setWavformCallback([&](const float* ptr, size_t size, bool lastChunk) {
++                const auto arrived=Clock::now();
++                ++callbackCount;
++                if (!ptr || size==0) return false;
++                if (waveform.empty()) { firstPcm=arrived; firstPayload=size; }
++                lastPcm=arrived; sawFinal=sawFinal||lastChunk;
++                waveform.insert(waveform.end(),ptr,ptr+size);
++                if (callbackCount==1) emit("\"event\":\"first_pcm\",\"iteration\":"+std::to_string(iteration)+
++                    ",\"fromGenerateMs\":"+number(ms(generateStart,arrived))+",\"fromProcessMs\":"+number(ms(processStart,arrived))+
++                    ",\"samples\":"+std::to_string(size)+",\"lastChunk\":"+(lastChunk?"true":"false"));
++                return true;
++            });
++            generateStart=Clock::now();
++            const bool generated=llm->generateTTS(text,language,maxFrames,refAudio);
++            const auto generateEnd=Clock::now();
++            const auto* context=llm->getContext();
++            const Counters after(context);
++            double squareSum=0.0, peak=0.0;
++            size_t nonfinite=0, aboveOne=0;
++            for (float value : waveform) {
++                if (!std::isfinite(value)) { ++nonfinite; continue; }
++                squareSum+=double(value)*double(value);
++                peak=std::max(peak,std::abs(double(value)));
++                if (std::abs(value)>1.0f) ++aboveOne;
++            }
++            const double duration=double(waveform.size())/kSampleRate;
++            const std::string wavPath=prefix+"-"+std::to_string(iteration)+".wav";
++            const auto saveStart=Clock::now();
++            bool saved=false;
++            if (generated && nonfinite==0 && !waveform.empty()) {
++                // Preserve raw model amplitudes. save() is the official WAV serialization path.
++                auto audio=MNN::Express::_Const(waveform.data(), {static_cast<int>(waveform.size())},
++                                                MNN::Express::NCHW, halide_type_of<float>());
++                saved=MNN::AUDIO::save(wavPath,audio,kSampleRate);
++            }
++            const auto saveEnd=Clock::now();
++            emit("\"event\":\"case_result\",\"iteration\":"+std::to_string(iteration)+
++                 ",\"generated\":"+(generated?"true":"false")+",\"wavSaved\":"+(saved?"true":"false")+
++                 ",\"wavPath\":"+quote(wavPath)+",\"sampleRate\":24000,\"sampleCount\":"+std::to_string(waveform.size())+
++                 ",\"audioSeconds\":"+number(duration)+",\"generateWallMs\":"+number(ms(generateStart,generateEnd))+
++                 ",\"firstPcmFromGenerateMs\":"+(waveform.empty()?"null":number(ms(generateStart,firstPcm)))+
++                 ",\"lastPcmFromGenerateMs\":"+(waveform.empty()?"null":number(ms(generateStart,lastPcm)))+
++                 ",\"completeWavFromGenerateMs\":"+number(ms(generateStart,saveEnd))+
++                 ",\"wavSaveMs\":"+number(ms(saveStart,saveEnd))+
++                 ",\"generationRtf\":"+(duration>0?number(ms(generateStart,generateEnd)/(1000*duration)):"null")+
++                 ",\"callbackCount\":"+std::to_string(callbackCount)+",\"firstPayloadSamples\":"+std::to_string(firstPayload)+
++                 ",\"sawFinalChunk\":"+(sawFinal?"true":"false")+",\"nonfiniteSamples\":"+std::to_string(nonfinite)+
++                 ",\"samplesAboveOne\":"+std::to_string(aboveOne)+",\"rawPeak\":"+number(peak)+
++                 ",\"rawRms\":"+(waveform.empty()?"null":number(std::sqrt(squareSum/waveform.size())))+
++                 ",\"generatedFrames\":"+std::to_string(context?context->gen_seq_len:0)+
++                 ",\"promptTokens\":"+std::to_string(context?context->prompt_len:0)+
++                 ",\"outputCodeCount\":"+std::to_string(context?context->output_tokens.size():0)+
++                 ",\"status\":"+std::to_string(context?static_cast<int>(context->status):-99)+
++                 ",\"frameCapRisk\":"+((context && context->gen_seq_len>=maxFrames)?"true":"false")+
++                 ",\"contextDeltaUs\":{\"prefill\":"+std::to_string(after.prefill-before.prefill)+
++                 ",\"decode\":"+std::to_string(after.decode-before.decode)+",\"audio\":"+std::to_string(after.audio-before.audio)+"}"+
++                 ",\"contextCountersAreOfficialNotGpuKernelTimers\":true,\"amplitudeNormalized\":false");
++            if (!generated || !saved || nonfinite!=0 || waveform.empty()) return 10;
++        }
++        emit("\"event\":\"completed\",\"processWallMs\":"+number(ms(processStart,Clock::now())));
++        return 0;
++    } catch (const std::exception& error) {
++        std::fprintf(stderr, "{\"event\":\"bench_error\",\"message\":%s}\n",quote(error.what()).c_str());
++        return 11;
++    }
++}

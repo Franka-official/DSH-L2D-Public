@@ -1,0 +1,38 @@
+# Local credentials and signing material
+.env
+.env.*
+!.env.example
+**/local.properties
+**/signing.properties
+**/signing.env
+**/*.keystore
+**/*.jks
+**/*.pem
+**/*.key
+
+# Generated build output and runtime state
+**/.gradle/
+**/.cxx/
+**/.native-deps/
+**/.runtime-assets/
+**/asset-provisioning.json
+**/build/
+**/node_modules/
+**/__pycache__/
+**/*.pyc
+**/*.part
+**/*.writing
+private/
+runtime-data/
+logs/
+
+# Binary release artifacts and separately provisioned assets
+*.apk
+*.aab
+*.so
+*.aar
+*.mnn
+*.onnx
+*.gguf
+models/
+assets-private/

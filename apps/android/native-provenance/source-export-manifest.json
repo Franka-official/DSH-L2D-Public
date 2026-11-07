@@ -1,0 +1,196 @@
+{
+  "schema": "dsh-l2d-exact-source-export-v1",
+  "captured_at_utc": "2026-11-04T16:06:09.850267+00:00",
+  "phase": "exported",
+  "output": "/path/to/workspace/dsh-go-20261104/source-inputs-review1.zip",
+  "payload_file_count": 26,
+  "payload_bytes": 727523,
+  "source_files": [
+    {
+      "archive_path": "project/gradlew",
+      "source_path": "/path/to/workspace/android-reviewed-20261030/gradlew",
+      "bytes": 8692,
+      "category": "wrapper"
+    },
+    {
+      "archive_path": "project/gradlew.bat",
+      "source_path": "/path/to/workspace/android-reviewed-20261030/gradlew.bat",
+      "bytes": 2918,
+      "category": "wrapper"
+    },
+    {
+      "archive_path": "project/gradle/wrapper/gradle-wrapper.jar",
+      "source_path": "/path/to/workspace/android-reviewed-20261030/gradle/wrapper/gradle-wrapper.jar",
+      "bytes": 43453,
+      "category": "wrapper"
+    },
+    {
+      "archive_path": "project/gradle/wrapper/gradle-wrapper.properties",
+      "source_path": "/path/to/workspace/android-reviewed-20261030/gradle/wrapper/gradle-wrapper.properties",
+      "bytes": 250,
+      "category": "wrapper"
+    },
+    {
+      "archive_path": "project/app/src/main/cpp/qwentts/qwen_tts_jni.cpp",
+      "source_path": "/path/to/workspace/android-reviewed-20261030/app/src/main/cpp/qwentts/qwen_tts_jni.cpp",
+      "bytes": 15015,
+      "category": "observed_jni_source_not_fresh_compile_proof"
+    },
+    {
+      "archive_path": "project/app/src/main/cpp/qwentts/QwenTtsJni.cmake",
+      "source_path": "/path/to/workspace/android-reviewed-20261030/app/src/main/cpp/qwentts/QwenTtsJni.cmake",
+      "bytes": 856,
+      "category": "observed_jni_source_not_fresh_compile_proof"
+    },
+    {
+      "archive_path": "project/app/src/main/cpp/qwentts/exports.map",
+      "source_path": "/path/to/workspace/android-reviewed-20261030/app/src/main/cpp/qwentts/exports.map",
+      "bytes": 88,
+      "category": "observed_jni_source_not_fresh_compile_proof"
+    },
+    {
+      "archive_path": "project/app/src/main/assets/soullink/performance.bundle.js",
+      "source_path": "/path/to/workspace/android-reviewed-20261030/app/src/main/assets/soullink/performance.bundle.js",
+      "bytes": 269385,
+      "category": "actual_runtime_source_asset"
+    },
+    {
+      "archive_path": "project/app/src/main/assets/soullink/profiles/whale.json",
+      "source_path": "/path/to/workspace/android-reviewed-20261030/app/src/main/assets/soullink/profiles/whale.json",
+      "bytes": 14495,
+      "category": "actual_runtime_source_asset"
+    },
+    {
+      "archive_path": "project/app/src/main/assets/soullink/profiles/ellen.json",
+      "source_path": "/path/to/workspace/android-reviewed-20261030/app/src/main/assets/soullink/profiles/ellen.json",
+      "bytes": 13846,
+      "category": "actual_runtime_source_asset"
+    },
+    {
+      "archive_path": "project/app/src/main/assets/licenses/soullink-LICENSE.txt",
+      "source_path": "/path/to/workspace/android-reviewed-20261030/app/src/main/assets/licenses/soullink-LICENSE.txt",
+      "bytes": 10222,
+      "category": "actual_runtime_source_asset"
+    },
+    {
+      "archive_path": "project/app/src/main/assets/licenses/soullink-emotion-sdk-LICENSE.txt",
+      "source_path": "/path/to/workspace/android-reviewed-20261030/app/src/main/assets/licenses/soullink-emotion-sdk-LICENSE.txt",
+      "bytes": 10222,
+      "category": "actual_runtime_source_asset"
+    },
+    {
+      "archive_path": "project/app/src/main/assets/licenses/soullink-emotion-sdk-NOTICE.txt",
+      "source_path": "/path/to/workspace/android-reviewed-20261030/app/src/main/assets/licenses/soullink-emotion-sdk-NOTICE.txt",
+      "bytes": 1031,
+      "category": "actual_runtime_source_asset"
+    },
+    {
+      "archive_path": "native/sampler-selected/transformers/llm/engine/src/omni.cpp",
+      "source_path": "/path/to/workspace/mobile-tts/qwen3-tts-official-mnn-20261103/samplerfix1-probe-20261104/candidate-mnn/transformers/llm/engine/src/omni.cpp",
+      "bytes": 179314,
+      "category": "actual_compiled_sampler_source"
+    },
+    {
+      "archive_path": "native/sampler-selected/transformers/llm/engine/src/omni.hpp",
+      "source_path": "/path/to/workspace/mobile-tts/qwen3-tts-official-mnn-20261103/samplerfix1-probe-20261104/candidate-mnn/transformers/llm/engine/src/omni.hpp",
+      "bytes": 9576,
+      "category": "actual_compiled_sampler_source"
+    },
+    {
+      "archive_path": "native/sampler-selected/transformers/llm/engine/src/llmconfig.hpp",
+      "source_path": "/path/to/workspace/mobile-tts/qwen3-tts-official-mnn-20261103/samplerfix1-probe-20261104/candidate-mnn/transformers/llm/engine/src/llmconfig.hpp",
+      "bytes": 24048,
+      "category": "actual_compiled_sampler_source"
+    },
+    {
+      "archive_path": "native/observed-interface-and-cmake/transformers/llm/engine/include/llm/llm.hpp",
+      "source_path": "/path/to/workspace/mobile-tts/qwen3-tts-official-mnn-20261103/diagnostic-source/MNN-3b04761b4a8f0ab60dad259f94771f19d1264475/transformers/llm/engine/include/llm/llm.hpp",
+      "bytes": 14099,
+      "category": "observed_custom_interface_or_build_input"
+    },
+    {
+      "archive_path": "native/observed-interface-and-cmake/transformers/llm/engine/CMakeLists.txt",
+      "source_path": "/path/to/workspace/mobile-tts/qwen3-tts-official-mnn-20261103/diagnostic-source/MNN-3b04761b4a8f0ab60dad259f94771f19d1264475/transformers/llm/engine/CMakeLists.txt",
+      "bytes": 9018,
+      "category": "observed_custom_interface_or_build_input"
+    },
+    {
+      "archive_path": "native/observed-interface-and-cmake/transformers/llm/engine/src/qwen3_tts_bench_diag.hpp",
+      "source_path": "/path/to/workspace/mobile-tts/qwen3-tts-official-mnn-20261103/diagnostic-source/MNN-3b04761b4a8f0ab60dad259f94771f19d1264475/transformers/llm/engine/src/qwen3_tts_bench_diag.hpp",
+      "bytes": 3682,
+      "category": "observed_custom_interface_or_build_input"
+    },
+    {
+      "archive_path": "native/observed-interface-and-cmake/transformers/llm/engine/demo/prts_qwen3_tts_bench.cpp",
+      "source_path": "/path/to/workspace/mobile-tts/qwen3-tts-official-mnn-20261103/diagnostic-source/MNN-3b04761b4a8f0ab60dad259f94771f19d1264475/transformers/llm/engine/demo/prts_qwen3_tts_bench.cpp",
+      "bytes": 10220,
+      "category": "observed_custom_interface_or_build_input"
+    },
+    {
+      "archive_path": "native/licenses/MNN-LICENSE.txt",
+      "source_path": "/path/to/workspace/mobile-tts/qwen3-tts-official-mnn-20261103/source/MNN-3b04761b4a8f0ab60dad259f94771f19d1264475/LICENSE.txt",
+      "bytes": 11346,
+      "category": "pinned_upstream_license"
+    },
+    {
+      "archive_path": "native/original-sampler-input/sampler-only-backport.diff",
+      "source_path": "/path/to/workspace/mobile-tts/qwen-listening-poem-20261104/source-fix1/sampler-only-backport.diff",
+      "bytes": 3002,
+      "category": "original_prepared_patch_provenance"
+    },
+    {
+      "archive_path": "native/original-sampler-input/sampler-candidate-manifest.json",
+      "source_path": "/path/to/workspace/mobile-tts/qwen-listening-poem-20261104/source-fix1/sampler-candidate-manifest.json",
+      "bytes": 1629,
+      "category": "original_prepared_patch_provenance"
+    }
+  ],
+  "optional_missing": [
+    {
+      "source_path": "/path/to/workspace/mobile-tts/soullink-native-integration-20261103/adapter/dsh-performance.ts",
+      "exists": false,
+      "category": "soullink_development_input_not_available_on_host"
+    },
+    {
+      "source_path": "/path/to/workspace/mobile-tts/soullink-native-integration-20261103/adapter/profile-tools.ts",
+      "exists": false,
+      "category": "soullink_development_input_not_available_on_host"
+    },
+    {
+      "source_path": "/path/to/workspace/mobile-tts/soullink-native-integration-20261103/build_bundle.cjs",
+      "exists": false,
+      "category": "soullink_development_input_not_available_on_host"
+    },
+    {
+      "source_path": "/path/to/workspace/mobile-tts/soullink-native-integration-20261103/write_release_manifest.cjs",
+      "exists": false,
+      "category": "soullink_development_input_not_available_on_host"
+    },
+    {
+      "source_path": "/path/to/workspace/mobile-tts/soullink-native-integration-20261103/source-plan.json",
+      "exists": false,
+      "category": "soullink_development_input_not_available_on_host"
+    },
+    {
+      "source_path": "/path/to/workspace/mobile-tts/soullink-native-integration-20261103/source-state.json",
+      "exists": false,
+      "category": "soullink_development_input_not_available_on_host"
+    },
+    {
+      "source_path": "/path/to/workspace/mobile-tts/soullink-native-integration-20261103/upstream/soullink/tsconfig.base.json",
+      "exists": false,
+      "category": "soullink_development_input_not_available_on_host"
+    }
+  ],
+  "generated_files": [
+    "native/patches/selected-runtime-vs-pinned-mnn.diff",
+    "native/recorded-build-recipe.json",
+    "README.txt"
+  ],
+  "project_source_modified": false,
+  "runtime_modified": false,
+  "source_complete": false,
+  "fresh_clone_buildable": false,
+  "hashes_computed": false,
+  "models_credentials_full_sdk_tree_or_native_library_payloads_read": false
+}

@@ -1,0 +1,38 @@
+name: 问题报告
+description: 提供可复现的问题和脱敏证据
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: "请勿提交API Key、Cookie、配对秘密或完整私人聊天。安全问题请先查看SECURITY.md。"
+  - type: input
+    id: versions
+    attributes:
+      label: 应用、插件与宿主版本
+      description: 写出具体版本或构建号，不只写最新版。
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 系统与设备
+      description: 型号、系统版本和接入方式；不要填写公网凭据。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 复现步骤
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: 预期与实际结果
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 必要的脱敏证据
+      description: 提供相关片段和发生时间；不要默认上传完整诊断包。

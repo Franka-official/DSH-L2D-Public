@@ -1,0 +1,41 @@
+{
+  "name": "dsh-mobile-call-adapter",
+  "version": "1.1.3",
+  "description": "Authenticated mobile call SSE adapter using DSH SessionController rc.4 call-local reasoning policy",
+  "type": "module",
+  "main": "plugin.js",
+  "exports": {
+    ".": "./plugin.js",
+    "./package.json": "./package.json",
+    "./cordis.patch.yml": "./cordis.patch.yml"
+  },
+  "files": [
+    "plugin.js",
+    "index.js",
+    "adapter.mjs",
+    "call-policy.mjs",
+    "relay.mjs",
+    "cordis.patch.yml",
+    "README.md",
+    "PROTOCOL.md",
+    "SUPPORTED.md",
+    "README.en.md",
+    "COPYING",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "*",
+    "@deepseek-ai/dsh-credentials": "*",
+    "@deepseek-ai/schemastery": "*"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "engines": {
+    "node": ">=22",
+    "dsh": ">=0.2.1-rc.4 <0.3.0-0"
+  },
+  "license": "AGPL-3.0-only"
+}

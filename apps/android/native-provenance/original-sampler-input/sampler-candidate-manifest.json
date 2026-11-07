@@ -1,0 +1,57 @@
+{
+  "phase": "candidate_prepared_not_compiled_not_run",
+  "upstream_sampler_commit": "a77cf71bea661ac9a2b54c7891d5ca31dadd0ff1",
+  "production_change": "replace forced greedy with official mixed sampler defaults",
+  "prefix_construction_unchanged": true,
+  "metadata_changes": false,
+  "new_api": false,
+  "current_source_unchanged": true,
+  "synthesis_body_after_prefix_identical": true,
+  "unchanged_header_bytes": {
+    "omni.hpp": true,
+    "llmconfig.hpp": true
+  },
+  "files": [
+    {
+      "relative_path": "transformers/llm/engine/src/omni.cpp",
+      "bytes": 179314
+    },
+    {
+      "relative_path": "transformers/llm/engine/src/omni.hpp",
+      "bytes": 9576
+    },
+    {
+      "relative_path": "transformers/llm/engine/src/llmconfig.hpp",
+      "bytes": 24048
+    }
+  ],
+  "test_only_trace": {
+    "environment_gate": "PRTS_QWEN_TTS_PREFIX_DIAG",
+    "event": "qwen_tts_prefix_diag",
+    "prefix_mode": "legacy_template",
+    "language_scope": "chinese inferred only from actual codec language token2055",
+    "speech_text_logged": false,
+    "default_enabled": false
+  },
+  "combined_control_observation": {
+    "scope": "reported actual sourcefix103 two-case run; not fabricated local tokenization",
+    "tokenizer_first_six": [
+      2154,
+      2156,
+      2055,
+      2157,
+      2148,
+      2149
+    ],
+    "used_codec_prefix": [
+      2154,
+      2156,
+      2055,
+      2157,
+      2148,
+      2149
+    ],
+    "implication": "This particular export prefix was already correct; prefix defect is not established here"
+  },
+  "hashes_computed": false
+}

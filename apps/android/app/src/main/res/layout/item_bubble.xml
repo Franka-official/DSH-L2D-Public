@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:orientation="vertical" android:paddingTop="5dp" android:paddingBottom="7dp">
+    <TextView android:id="@+id/bubbleName" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_marginHorizontal="5dp" android:layout_marginBottom="5dp" android:textSize="10sp"
+        android:textColor="@color/ui_text_secondary" android:shadowColor="#60121B2C" android:shadowRadius="4"/>
+    <TextView android:id="@+id/bubbleText" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:maxWidth="280dp" android:paddingHorizontal="14dp" android:paddingVertical="11dp"
+        android:lineSpacingExtra="3dp" android:textSize="14sp" android:textColor="@color/ui_text"
+        android:background="@drawable/ui_bubble_in" android:textIsSelectable="true"/>
+    <TextView android:id="@+id/bubbleTranslation" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_gravity="start" android:layout_marginStart="8dp" android:layout_marginTop="4dp"
+        android:maxWidth="264dp" android:paddingHorizontal="12dp" android:paddingVertical="9dp"
+        android:lineSpacingExtra="2dp" android:textSize="12sp" android:textColor="@color/ui_text_secondary"
+        android:background="@drawable/ui_bubble_translation" android:textIsSelectable="true" android:visibility="gone"/>
+</LinearLayout>

@@ -1,0 +1,9 @@
+# Example only. Copy to .github/CODEOWNERS after actual maintainers are chosen.
+# Every owner below is a commented placeholder, not a real assigned account.
+# /apps/android/                   @YOUR_ORG/android-maintainers
+# /native/qwen-mnn/               @YOUR_ORG/native-audio-maintainers
+# /integrations/astrbot/          @YOUR_ORG/integration-maintainers
+# /integrations/deepseek-harness/ @YOUR_ORG/integration-maintainers
+# /integrations/dsh-go/           @YOUR_ORG/integration-maintainers
+# /protocol/                     @YOUR_ORG/protocol-maintainers
+# /docs/                         @YOUR_ORG/documentation-maintainers

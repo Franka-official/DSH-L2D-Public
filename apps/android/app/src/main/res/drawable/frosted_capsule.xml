@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 磨砂胶囊：半透白 + 白描边 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="32dp" />
+            <solid android:color="@color/frost_fill" />
+            <stroke android:width="2dp" android:color="@color/frost_stroke" />
+        </shape>
+    </item>
+</layer-list>

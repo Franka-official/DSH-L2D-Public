@@ -1,0 +1,16 @@
+{
+  "name": "dsh-l2d-motion",
+  "version": "0.0.1",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "description": "Pinned SoulLink sources and the DSH L2D performance adapter",
+  "scripts": {
+    "build": "node build.cjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rootCall" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@color/ui_background">
+    <ImageView android:id="@+id/bgImage" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:scaleType="centerCrop" android:src="@drawable/ui_bg_aurora" android:contentDescription="@null"/>
+    <FrameLayout android:id="@+id/live2dHost" android:layout_width="match_parent" android:layout_height="match_parent"/>
+    <View android:layout_width="match_parent" android:layout_height="190dp" android:background="@drawable/ui_scrim_top"/>
+    <View android:layout_width="match_parent" android:layout_height="340dp" android:layout_gravity="bottom" android:background="@drawable/ui_scrim_bottom"/>
+    <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal" android:layout_marginTop="24dp" android:orientation="vertical"
+        android:gravity="center" android:background="@drawable/ui_glass_panel" android:paddingHorizontal="23dp" android:paddingVertical="11dp">
+        <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center_vertical">
+            <View android:id="@+id/connectionDot" android:layout_width="6dp" android:layout_height="6dp"
+                android:layout_marginEnd="8dp" android:background="@drawable/ui_status_dot"/>
+            <TextView android:id="@+id/callName" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="鲸鱼娘" android:textColor="@color/ui_text" android:textSize="17sp"
+                android:fontFamily="sans-serif-medium" android:letterSpacing="0.05"/>
+        </LinearLayout>
+        <TextView android:id="@+id/callTimer" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="5dp" android:maxWidth="270dp" android:maxLines="2" android:gravity="center"
+            android:text="00:00 · 连接中" android:textColor="@color/ui_text_secondary" android:textSize="11sp"/>
+    </LinearLayout>
+    <TextView android:id="@+id/callHint" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal" android:layout_marginTop="108dp"
+        android:text="双击画面可收起控件" android:textColor="@color/ui_text_secondary" android:textSize="11sp"
+        android:shadowColor="#A0121B2C" android:shadowRadius="6"/>
+    <androidx.appcompat.widget.SwitchCompat android:id="@+id/faceTrackingToggle"
+        android:layout_width="wrap_content" android:layout_height="42dp"
+        android:layout_gravity="top|start" android:layout_marginTop="132dp" android:layout_marginStart="16dp"
+        android:paddingHorizontal="10dp" android:background="@drawable/ui_glass_panel"
+        android:text="本机面部观察" android:textSize="10sp" android:textColor="@color/ui_text"
+        android:checked="true" android:contentDescription="本机面部观察开关"/>
+    <LinearLayout android:id="@+id/cameraPreviewCard" android:layout_width="126dp" android:layout_height="wrap_content"
+        android:layout_gravity="top|end" android:layout_marginTop="182dp" android:layout_marginEnd="14dp"
+        android:orientation="vertical" android:background="@drawable/ui_glass_panel" android:padding="5dp"
+        android:visibility="gone">
+        <FrameLayout android:id="@+id/cameraPreviewHost" android:layout_width="match_parent" android:layout_height="154dp"
+            android:background="#FF101827" android:contentDescription="仅在本机处理的可见相机小窗"/>
+        <TextView android:id="@+id/cameraPreviewStatus" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="前置预览 · 仅本机" android:textSize="9sp" android:textColor="@color/ui_text_secondary"
+            android:gravity="center" android:maxLines="2" android:paddingVertical="5dp"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="34dp" android:gravity="center"
+            android:orientation="horizontal">
+            <ImageButton android:id="@+id/btnPreviewPhoto" android:layout_width="34dp" android:layout_height="34dp"
+                android:src="@drawable/ui_ic_camera" android:padding="8dp" android:background="@drawable/ui_glass_button"
+                android:contentDescription="打开拍照面板，照片不会自动发送"/>
+            <ImageButton android:id="@+id/btnPreviewFlip" android:layout_width="34dp" android:layout_height="34dp"
+                android:layout_marginHorizontal="4dp" android:src="@drawable/ui_ic_camera_flip" android:padding="8dp"
+                android:background="@drawable/ui_glass_button" android:contentDescription="打开相机并切换前后摄像头"/>
+            <ImageButton android:id="@+id/btnPreviewClose" android:layout_width="34dp" android:layout_height="34dp"
+                android:src="@drawable/ui_ic_close" android:padding="9dp" android:background="@drawable/ui_glass_button"
+                android:contentDescription="关闭相机预览和本机观察"/>
+        </LinearLayout>
+    </LinearLayout>
+    <androidx.recyclerview.widget.RecyclerView android:id="@+id/callChat"
+        android:layout_width="match_parent" android:layout_height="182dp" android:layout_gravity="bottom"
+        android:layout_marginBottom="184dp" android:layout_marginHorizontal="20dp" android:clipToPadding="false"
+        android:paddingHorizontal="2dp" android:paddingTop="12dp" android:paddingBottom="3dp"
+        android:scrollbars="none" android:fadingEdgeLength="18dp" android:requiresFadingEdge="vertical"/>
+    <LinearLayout android:id="@+id/photoDraft" android:layout_width="match_parent" android:layout_height="60dp"
+        android:layout_gravity="bottom" android:layout_marginBottom="178dp" android:layout_marginHorizontal="22dp"
+        android:orientation="horizontal" android:gravity="center_vertical" android:padding="6dp"
+        android:background="@drawable/ui_glass_panel" android:visibility="gone">
+        <ImageView android:id="@+id/photoDraftThumb" android:layout_width="52dp" android:layout_height="48dp"
+            android:scaleType="centerCrop" android:contentDescription="待发送照片缩略图"/>
+        <TextView android:id="@+id/photoDraftLabel" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:layout_marginHorizontal="11dp" android:text="照片待发送\n可在下方加上文字" android:textSize="11sp"
+            android:textColor="@color/ui_text"/>
+        <ImageButton android:id="@+id/btnRemovePhoto" android:layout_width="38dp" android:layout_height="38dp"
+            android:padding="11dp" android:src="@drawable/ui_ic_close" android:background="@drawable/ui_glass_button"
+            android:contentDescription="移除待发送照片"/>
+    </LinearLayout>
+    <LinearLayout android:id="@+id/inputBar" android:layout_width="match_parent" android:layout_height="52dp"
+        android:layout_gravity="bottom" android:layout_marginBottom="116dp" android:layout_marginHorizontal="22dp"
+        android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/ui_glass_panel"
+        android:paddingStart="7dp" android:paddingEnd="7dp">
+        <ImageButton android:id="@+id/btnCamera" android:layout_width="38dp" android:layout_height="38dp"
+            android:layout_marginEnd="7dp" android:padding="9dp" android:src="@drawable/ui_ic_camera"
+            android:background="@drawable/ui_glass_button" android:contentDescription="拍照或选择照片，加入草稿"/>
+        <ImageButton android:id="@+id/btnAction" android:layout_width="38dp" android:layout_height="38dp"
+            android:layout_marginEnd="7dp" android:padding="10dp" android:src="@drawable/ui_ic_action"
+            android:background="@drawable/ui_glass_button" android:contentDescription="选择表情或动作"/>
+        <EditText android:id="@+id/inputText" android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_weight="1" android:background="@null" android:hint="说点什么…"
+            android:textColorHint="@color/ui_text_secondary" android:textColor="@color/ui_text"
+            android:textSize="14sp" android:imeOptions="actionSend" android:inputType="text" android:maxLines="1"
+            android:importantForAutofill="no"/>
+        <ImageButton android:id="@+id/btnSend" android:layout_width="38dp" android:layout_height="38dp"
+            android:layout_marginStart="8dp" android:padding="10dp" android:src="@drawable/ui_ic_send"
+            android:background="@drawable/ui_send_button" android:contentDescription="发送输入区的照片和文字"/>
+    </LinearLayout>
+    <LinearLayout android:id="@+id/buttonCluster" android:layout_width="wrap_content" android:layout_height="90dp"
+        android:layout_gravity="bottom|center_horizontal" android:layout_marginBottom="16dp"
+        android:orientation="horizontal" android:gravity="center">
+        <LinearLayout android:id="@+id/micControl" android:layout_width="94dp" android:layout_height="match_parent"
+            android:orientation="vertical" android:gravity="center_horizontal">
+            <ImageButton android:id="@+id/btnMic" android:layout_width="62dp" android:layout_height="62dp"
+                android:background="@drawable/ui_glass_button" android:padding="18dp" android:src="@drawable/ui_ic_mic"
+                android:contentDescription="麦克风已关闭，点击开启录音"/>
+            <TextView android:id="@+id/micLabel" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="8dp" android:text="麦克风 · 关" android:textColor="@color/ui_text_secondary" android:textSize="10sp"/>
+        </LinearLayout>
+        <LinearLayout android:layout_width="94dp" android:layout_height="match_parent" android:layout_marginStart="22dp"
+            android:orientation="vertical" android:gravity="center_horizontal">
+            <ImageButton android:id="@+id/btnHangup" android:layout_width="62dp" android:layout_height="62dp"
+                android:background="@drawable/ui_glass_danger" android:padding="18dp" android:src="@drawable/ui_ic_hangup"
+                android:contentDescription="@string/end_call"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp"
+                android:text="结束通话" android:textColor="@color/ui_text_secondary" android:textSize="10sp"/>
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

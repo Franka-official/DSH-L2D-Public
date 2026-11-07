@@ -1,0 +1,12 @@
+# Included by the product hook in the pinned MNN engine CMake.
+if(NOT ANDROID OR MNN_BUILD_SHARED_LIBS OR MNN_SEP_BUILD)
+  message(FATAL_ERROR "Qwen JNI requires Android and the isolated static MNN configuration")
+endif()
+add_library(prts_qwen_tts SHARED "${CMAKE_CURRENT_LIST_DIR}/qwen_tts_jni.cpp")
+target_compile_features(prts_qwen_tts PRIVATE cxx_std_17)
+target_compile_options(prts_qwen_tts PRIVATE -fvisibility=hidden -fvisibility-inlines-hidden -fexceptions)
+target_compile_options(prts_qwen_tts PRIVATE -fno-rtti)
+target_include_directories(prts_qwen_tts PRIVATE "${CMAKE_SOURCE_DIR}/transformers/llm/engine/include" "${CMAKE_SOURCE_DIR}/tools/audio/include")
+target_link_libraries(prts_qwen_tts PRIVATE ${LLM_DEPS} log)
+target_link_options(prts_qwen_tts PRIVATE "-Wl,--exclude-libs,ALL" "-Wl,-Bsymbolic" "-Wl,--no-undefined" "-Wl,--version-script=${CMAKE_CURRENT_LIST_DIR}/exports.map")
+target_link_options(prts_qwen_tts PRIVATE $<$<CONFIG:Release>:-s>)

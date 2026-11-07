@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DSH L2D</string>
+    <string name="start_call">开始通话</string>
+    <string name="settings">设置</string>
+    <string name="server_addr">服务器地址</string>
+    <string name="config_pick">配置选择</string>
+    <string name="end_call">挂断</string>
+    <string name="hint_type">说点什么…</string>
+</resources>

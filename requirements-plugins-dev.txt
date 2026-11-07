@@ -1,0 +1,2 @@
+# Development tests only; not a plugin runtime dependency installation recipe.
+httpx==0.28.1

@@ -1,0 +1,37 @@
+DSH L2D — license scope
+
+The original project-owned source code in this repository is licensed under
+the GNU Affero General Public License, version 3 only (AGPL-3.0-only).
+The complete, unmodified license text is provided in COPYING.
+
+This grant covers only copyright interests that the project's contributors
+are entitled to license. Contributions retain their respective copyrights.
+Existing file-level notices and third-party licenses remain applicable.
+
+Third-party source code, libraries and SDK components are not relicensed by
+this notice. In particular, Live2D Cubism Core remains subject to its own
+proprietary license; Cubism Framework, MNN, Qwen, SoulLink, AndroidX and other
+dependencies retain their respective licenses and notices.
+
+Model weights, reference recordings, character models, textures, motions,
+images, icons and other audiovisual assets are not licensed under this notice.
+Their sources and distribution status are recorded separately in
+ASSET_SOURCES.md and THIRD_PARTY_LICENSES.md.
+
+Additional permission under GNU AGPL version 3, section 7:
+
+For project-owned code that the contributors have the right to license, its
+copyright holders additionally permit you to link or combine that code with
+the Live2D Cubism Native SDK's Cubism Core and Cubism Framework, and to convey
+the resulting combined work, provided that you comply with the respective
+Live2D licenses and all other applicable third-party license conditions.
+
+The project-owned code, including its modifications and derivative code,
+remains under AGPL-3.0-only. Its applicable source-availability and other AGPL
+obligations remain in force. This additional permission does not relicense
+Cubism Core or Cubism Framework, require disclosure of their proprietary
+source, or waive their notices, redistribution or publication conditions.
+It grants no exception for any other proprietary SDK or library, and grants
+no rights on behalf of third-party copyright holders.
+
+See CONTRIBUTING.md for contribution requirements and DCO.md for sign-off.

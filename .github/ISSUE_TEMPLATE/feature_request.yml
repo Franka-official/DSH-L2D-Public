@@ -1,0 +1,22 @@
+name: 功能建议
+description: 说明需要解决的实际场景
+title: "[Feature] "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 当前场景与困难
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 希望得到的行为
+      description: 说明影响的模块，以及现有替代方法。
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: 兼容性与验证思路
+      description: 如涉及权限、模型、协议或素材，请注明。

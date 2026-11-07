@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"
+    android:background="@drawable/ui_sheet_surface">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"
+        android:paddingHorizontal="24dp" android:paddingTop="12dp" android:paddingBottom="15dp">
+        <View android:layout_width="36dp" android:layout_height="4dp" android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="18dp" android:background="@drawable/ui_sheet_handle"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:gravity="center_vertical" android:minHeight="44dp" android:orientation="horizontal">
+            <TextView android:id="@+id/btnSettingsBack" android:layout_width="44dp" android:layout_height="44dp"
+                android:layout_marginEnd="10dp" android:gravity="center" android:background="@drawable/ui_chip"
+                android:text="‹" android:textColor="@color/ui_text" android:textSize="27sp"
+                android:contentDescription="返回设置" android:clickable="true" android:focusable="true" android:visibility="gone"/>
+            <TextView android:id="@+id/settingsPageTitle" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:accessibilityLiveRegion="polite" android:text="设置" android:textColor="@color/ui_text"
+                android:textSize="23sp" android:fontFamily="sans-serif-medium"/>
+        </LinearLayout>
+    </LinearLayout>
+    <ScrollView android:id="@+id/settingsScroll" android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1" android:fillViewport="false" android:scrollbars="none">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"
+            android:paddingHorizontal="24dp" android:paddingBottom="18dp">
+            <LinearLayout android:id="@+id/settingsHomeSection" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:orientation="vertical">
+                <TextView android:id="@+id/btnSettingsVoice" android:layout_width="match_parent"
+                    android:layout_height="56dp" android:gravity="center_vertical"
+                    android:paddingHorizontal="16dp" android:background="@drawable/ui_chip" android:text="音色管理"
+                    android:textColor="@color/ui_text" android:textSize="15sp" android:fontFamily="sans-serif-medium"
+                    android:clickable="true" android:focusable="true"/>
+                <TextView android:id="@+id/btnSettingsModel" android:layout_width="match_parent"
+                    android:layout_height="56dp" android:layout_marginTop="10dp" android:gravity="center_vertical"
+                    android:paddingHorizontal="16dp" android:background="@drawable/ui_chip" android:text="模型管理"
+                    android:textColor="@color/ui_text" android:textSize="15sp" android:fontFamily="sans-serif-medium"
+                    android:clickable="true" android:focusable="true"/>
+                <TextView android:id="@+id/btnSettingsBackground" android:layout_width="match_parent"
+                    android:layout_height="56dp" android:layout_marginTop="10dp" android:gravity="center_vertical"
+                    android:paddingHorizontal="16dp" android:background="@drawable/ui_chip" android:text="背景管理"
+                    android:textColor="@color/ui_text" android:textSize="15sp" android:fontFamily="sans-serif-medium"
+                    android:clickable="true" android:focusable="true"/>
+                <TextView android:id="@+id/btnSettingsConnection" android:layout_width="match_parent"
+                    android:layout_height="56dp" android:layout_marginTop="10dp" android:gravity="center_vertical"
+                    android:paddingHorizontal="16dp" android:background="@drawable/ui_chip" android:text="连接管理"
+                    android:textColor="@color/ui_text" android:textSize="15sp" android:fontFamily="sans-serif-medium"
+                    android:clickable="true" android:focusable="true"/>
+                <TextView android:id="@+id/btnSettingsCall" android:layout_width="match_parent"
+                    android:layout_height="56dp" android:layout_marginTop="10dp" android:gravity="center_vertical"
+                    android:paddingHorizontal="16dp" android:background="@drawable/ui_chip" android:text="通话管理"
+                    android:textColor="@color/ui_text" android:textSize="15sp" android:fontFamily="sans-serif-medium"
+                    android:clickable="true" android:focusable="true"/>
+            </LinearLayout>
+            <LinearLayout android:id="@+id/settingsVoiceSection" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="回复语言"
+                    android:textColor="@color/ui_text" android:textSize="15sp" android:fontFamily="sans-serif-medium"/>
+                <RadioGroup android:id="@+id/groupReplyLanguage" android:layout_width="match_parent" android:layout_height="48dp"
+                    android:layout_marginTop="8dp" android:orientation="horizontal">
+                    <RadioButton android:id="@+id/replyChinese" android:layout_width="0dp" android:layout_height="match_parent"
+                        android:layout_weight="1" android:text="中文" android:tag="zh" android:textColor="@color/ui_text" android:textSize="13sp"/>
+                    <RadioButton android:id="@+id/replyJapanese" android:layout_width="0dp" android:layout_height="match_parent"
+                        android:layout_weight="1" android:text="日文" android:tag="ja" android:textColor="@color/ui_text" android:textSize="13sp"/>
+                    <RadioButton android:id="@+id/langEn" android:layout_width="0dp" android:layout_height="match_parent"
+                        android:layout_weight="1" android:text="英文" android:tag="en" android:textColor="@color/ui_text" android:textSize="13sp"/>
+                </RadioGroup>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginVertical="21dp" android:background="#22FFFFFF"/>
+            </LinearLayout>
+            <LinearLayout android:id="@+id/settingsModelSection" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+                    <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="通话角色"
+                        android:textColor="@color/ui_text" android:textSize="15sp" android:fontFamily="sans-serif-medium"/>
+                    <ImageButton android:id="@+id/btnAddChar" android:layout_width="38dp" android:layout_height="38dp"
+                        android:padding="10dp" android:background="@drawable/ui_glass_button" android:src="@drawable/ui_ic_add"
+                        android:contentDescription="导入角色模型"/>
+                </LinearLayout>
+                <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:scrollbars="none">
+                    <LinearLayout android:id="@+id/charStrip" android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal"/>
+                </HorizontalScrollView>
+                <TextView android:id="@+id/btnAdjustCharacter" android:layout_width="match_parent" android:layout_height="46dp"
+                    android:layout_marginTop="9dp" android:gravity="center_vertical" android:paddingHorizontal="14dp"
+                    android:background="@drawable/ui_chip" android:text="角色大小与位置" android:textColor="@color/ui_text_secondary"
+                    android:textSize="12sp" android:clickable="true" android:focusable="true"/>
+            </LinearLayout>
+            <LinearLayout android:id="@+id/settingsBackgroundSection" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:gravity="center_vertical">
+                    <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="背景"
+                        android:textColor="@color/ui_text" android:textSize="15sp" android:fontFamily="sans-serif-medium"/>
+                    <ImageButton android:id="@+id/btnAddBg" android:layout_width="38dp" android:layout_height="38dp"
+                        android:padding="10dp" android:background="@drawable/ui_glass_button" android:src="@drawable/ui_ic_add"
+                        android:contentDescription="导入背景图片或视频"/>
+                </LinearLayout>
+                <HorizontalScrollView android:layout_width="match_parent" android:layout_height="88dp" android:layout_marginTop="10dp" android:scrollbars="none">
+                    <LinearLayout android:id="@+id/bgStrip" android:layout_width="wrap_content" android:layout_height="match_parent" android:orientation="horizontal"/>
+                </HorizontalScrollView>
+                <TextView android:id="@+id/btnAdjustBg" android:layout_width="match_parent" android:layout_height="46dp"
+                    android:layout_marginTop="9dp" android:gravity="center_vertical" android:paddingHorizontal="14dp"
+                    android:background="@drawable/ui_chip" android:text="背景大小与位置" android:textColor="@color/ui_text_secondary"
+                    android:textSize="12sp" android:clickable="true" android:focusable="true"/>
+            </LinearLayout>
+            <LinearLayout android:id="@+id/settingsConnectionSection" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="连接方式"
+                    android:textColor="@color/ui_text" android:textSize="15sp" android:fontFamily="sans-serif-medium"/>
+                <RadioGroup android:id="@+id/groupConnectionMode" android:layout_width="match_parent" android:layout_height="56dp"
+                    android:layout_marginTop="11dp" android:orientation="horizontal"/>
+                <TextView android:id="@+id/connectionModeHint" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp" android:textColor="@color/ui_text" android:textSize="14sp" android:visibility="gone"/>
+                <TextView android:id="@+id/connectionUrlLabel" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp" android:text="服务网址" android:textColor="@color/ui_text_secondary" android:textSize="12sp"/>
+                <EditText android:id="@+id/editConnectionUrl" android:layout_width="match_parent" android:layout_height="50dp"
+                    android:layout_marginTop="8dp" android:background="@drawable/ui_input_surface" android:paddingHorizontal="14dp"
+                    android:inputType="textUri" android:singleLine="true" android:imeOptions="actionNext"
+                    android:textColor="@color/ui_text" android:textColorHint="@color/ui_text_muted" android:textSize="12sp"
+                    android:importantForAutofill="no"/>
+                <LinearLayout android:id="@+id/apiKeyRow" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical" android:layout_marginTop="14dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                            android:text="API Key" android:textColor="@color/ui_text_secondary" android:textSize="12sp"/>
+                        <TextView android:id="@+id/btnClearApiKey" android:layout_width="wrap_content" android:layout_height="36dp"
+                            android:gravity="center" android:paddingHorizontal="5dp" android:text="清除" android:textSize="11sp"
+                            android:textColor="@color/ui_accent" android:clickable="true" android:focusable="true"/>
+                    </LinearLayout>
+                    <EditText android:id="@+id/editApiKey" android:layout_width="match_parent" android:layout_height="50dp"
+                        android:background="@drawable/ui_input_surface" android:paddingHorizontal="14dp" android:inputType="textPassword"
+                        android:singleLine="true" android:imeOptions="actionDone" android:saveEnabled="false"
+                        android:importantForAutofill="no" android:textColor="@color/ui_text" android:textColorHint="@color/ui_text_muted"
+                        android:hint="API Key" android:textSize="12sp"/>
+                </LinearLayout>
+                <LinearLayout android:id="@+id/callRelayFields" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="14dp"
+                    android:orientation="vertical" android:visibility="gone">
+                    <EditText android:id="@+id/editCallRelayUrl" android:layout_width="match_parent"
+                        android:layout_height="50dp" android:background="@drawable/ui_input_surface"
+                        android:paddingHorizontal="14dp" android:inputType="textUri" android:singleLine="true"
+                        android:hint="通话中继地址" android:textColor="@color/ui_text"
+                        android:textColorHint="@color/ui_text_muted" android:textSize="12sp"
+                        android:importantForAutofill="no"/>
+                    <EditText android:id="@+id/editCallRelayKey" android:layout_width="match_parent"
+                        android:layout_height="50dp" android:layout_marginTop="8dp" android:background="@drawable/ui_input_surface"
+                        android:paddingHorizontal="14dp" android:inputType="textPassword" android:singleLine="true"
+                        android:hint="通话中继 Key（选填）" android:textColor="@color/ui_text"
+                        android:textColorHint="@color/ui_text_muted" android:textSize="12sp"
+                        android:saveEnabled="false" android:importantForAutofill="no"/>
+                </LinearLayout>
+                <LinearLayout android:id="@+id/pairingRow" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical" android:layout_marginTop="14dp" android:padding="15dp" android:background="@drawable/ui_glass_panel">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="手机连接码"
+                        android:textColor="@color/ui_text_secondary" android:textSize="12sp"/>
+                    <TextView android:id="@+id/pairingCode" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp" android:text="— — — — — —" android:textColor="@color/ui_text"
+                        android:textSize="25sp" android:letterSpacing="0.12" android:fontFamily="monospace"
+                        android:textIsSelectable="true" android:contentDescription="本机配对码"/>
+                    <TextView android:id="@+id/pairingStatus" android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp" android:textColor="@color/ui_text" android:textSize="14sp"
+                        android:visibility="gone"/>
+                    <com.google.android.material.button.MaterialButton android:id="@+id/btnGeneratePairingCode" style="@style/PRTS.Button"
+                        android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="12dp"
+                        android:text="生成连接码" android:textSize="13sp" android:textColor="@color/ui_accent_ink"
+                        app:backgroundTint="@color/ui_accent" app:cornerRadius="23dp"/>
+                </LinearLayout>
+            </LinearLayout>
+            <LinearLayout android:id="@+id/settingsCallSection" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+                <androidx.appcompat.widget.SwitchCompat android:id="@+id/proactiveSpeechSwitch"
+                    android:layout_width="match_parent" android:layout_height="48dp" android:text="主动开口"
+                    android:textColor="@color/ui_text" android:textSize="15sp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp" android:labelFor="@+id/editProactiveWaitSeconds"
+                    android:text="静默等待（秒）" android:textColor="@color/ui_text" android:textSize="15sp"/>
+                <EditText android:id="@id/editProactiveWaitSeconds" android:layout_width="match_parent"
+                    android:layout_height="50dp" android:layout_marginTop="8dp" android:background="@drawable/ui_input_surface"
+                    android:paddingHorizontal="14dp" android:inputType="number" android:singleLine="true"
+                    android:maxLength="3" android:imeOptions="actionDone" android:importantForAutofill="no"
+                    android:textColor="@color/ui_text" android:textSize="16sp"/>
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"
+        android:paddingHorizontal="24dp" android:paddingTop="10dp" android:paddingBottom="18dp">
+        <TextView android:id="@+id/settingsError" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp" android:textColor="@color/ui_danger" android:textSize="12sp" android:visibility="gone"/>
+        <com.google.android.material.button.MaterialButton android:id="@+id/btnSaveSettings" style="@style/PRTS.Button"
+            android:layout_width="match_parent" android:layout_height="54dp" android:text="保存设置" android:textSize="15sp"
+            android:textColor="@color/ui_accent_ink" app:backgroundTint="@color/ui_accent" app:cornerRadius="28dp"/>
+    </LinearLayout>
+</LinearLayout>

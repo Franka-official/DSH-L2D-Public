@@ -1,0 +1,261 @@
+--- a/transformers/llm/engine/src/omni.cpp
++++ b/transformers/llm/engine/src/omni.cpp
+@@ -2850,9 +2850,17 @@
+         MNN_ERROR("[Error]: Qwen3-TTS chat template produced empty prompt\n");
+         return false;
+     }
++    mTalker->setTtsCancelCallback(mTtsCancelCallback);
++    mTalker->setTtsProgressCallback(mTtsProgressCallback);
++    mTalker->configureTtsStreaming(mTtsChunkFrames, mTtsLeftContextFrames);
+     bool ok = mTalker->generateQwen3TTS(prompt, max_new_tokens, ref_audio);
++    mTalker->setTtsCancelCallback({});
++    mTalker->setTtsProgressCallback({});
+     const auto* talkerContext = mTalker->getContext();
+     if (talkerContext) {
++        mContext->tts_codec_eos = talkerContext->tts_codec_eos;
++        mContext->tts_cancel_observed = talkerContext->tts_cancel_observed;
++        mContext->tts_pcm_frames = talkerContext->tts_pcm_frames;
+         mContext->prompt_len = talkerContext->prompt_len;
+         mContext->gen_seq_len = talkerContext->gen_seq_len;
+         mContext->prefill_us = talkerContext->prefill_us;
+@@ -2972,7 +2980,12 @@
+             cpScheduleConfig.backendConfig = &cpBackendConfig;
+             if (auxScheduleConfig.type != MNN_FORWARD_CPU) {
+                 cpScheduleConfig.type = MNN_FORWARD_CPU;
+-                cpScheduleConfig.numThread = mConfig->thread_num();
++                // Optional benchmark scheduling separation; absent key keeps official behavior.
++                cpScheduleConfig.numThread = mConfig->config_.value("qwen3_tts_cp_cpu_threads", mConfig->thread_num());
++                if (cpScheduleConfig.numThread <= 0) {
++                    MNN_ERROR("[Error]: qwen3_tts_cp_cpu_threads must be positive\n");
++                    return false;
++                }
+             }
+             mQwen3CpRuntimeManager.reset(Executor::RuntimeManager::createRuntimeManager(cpScheduleConfig));
+             setRuntimeHint(mQwen3CpRuntimeManager, true);
+@@ -3022,7 +3035,13 @@
+         mQwen3AudioCodePredictorEmbedding.reset(
+             new DiskEmbedding(mConfig, mConfig->audio_code_predictor_embedding_file(), hiddenSize));
+         mMaxNewTokens = mConfig->talker_max_new_tokens();
+-        set_config("{\"sampler_type\":\"greedy\"}");
++        // Sampling is required: greedy decoding falls into repetition/silence
++        // loops for many speaker embeddings (the official Python defaults are
++        // temperature 0.9 / top_k 50 / top_p 1.0 / repetition_penalty 1.05).
++        set_config(
++            "{\"sampler_type\": \"mixed\", \"mixed_samplers\": [\"penalty\", \"topK\", \"topP\", \"temperature\"], "
++            "\"temperature\": 0.9, \"top_k\": 50, \"top_p\": 1.0, \"repetition_penalty\": 1.05, "
++            "\"penalty_window\": 64}");
+         mSampler.reset(Sampler::createSampler(mContext, mConfig));
+         mContext->status = LlmStatus::RUNNING;
+         return true;
+@@ -3516,6 +3535,19 @@
+ 
+ bool Talker::generateQwen3TTS(const std::string& prompt, int maxFrames, const std::string& refAudio) {
+     CHECK_LLM_RUNNING_RET(mContext, false);
++    mContext->tts_codec_eos = false;
++    mContext->tts_cancel_observed = false;
++    mContext->tts_pcm_frames = 0;
++    mContext->gen_seq_len = 0;
++    auto cancelled = [&]() {
++        if (mTtsCancelCallback && mTtsCancelCallback()) {
++            mContext->tts_cancel_observed = true;
++            mContext->status = LlmStatus::USER_CANCEL;
++            return true;
++        }
++        return false;
++    };
++    if (cancelled()) return false;
+     MNN::Express::ExecutorScope s(mExecutor);
+     if (!isQwen3TTSTalker(mConfig)) {
+         MNN_ERROR("[Error]: generateQwen3TTS called on non-qwen3_tts talker\n");
+@@ -3556,6 +3588,7 @@
+     }
+     std::vector<int> codecPrefix(inputIds.begin(), inputIds.begin() + 6);
+     std::vector<int> textIds(inputIds.begin() + 6, inputIds.end());
++
+     std::vector<int> ttsIds{mConfig->tts_bos_token_id(), mConfig->tts_eos_token_id(), mConfig->tts_pad_token_id()};
+     VARP speakerEmbedding = nullptr;
+     if (!refAudio.empty()) {
+@@ -3573,6 +3606,7 @@
+         return false;
+ #endif
+     }
++    if (cancelled()) return false;
+     auto codecEmbeds = makeQwen3TTSCodecEmbeds(mDiskEmbedding.get(), codecPrefix, speakerEmbedding, hiddenSize);
+     auto textRawEmbeds = makeEmbeddingInput(mQwen3TextEmbedding.get(), textIds, mConfig->talker_text_hidden_size());
+     auto ttsRawEmbeds = makeEmbeddingInput(mQwen3TextEmbedding.get(), ttsIds, mConfig->talker_text_hidden_size());
+@@ -3624,6 +3658,7 @@
+     mMeta->remove = mMeta->previous;
+     mMeta->add    = seqLen;
+     MNN::Timer prefillTimer;
++    if (cancelled()) return false;
+     auto talkerOutputs = mModule->onForward({prefillEmbeds, talkerMask, talkerPos});
+     mContext->prefill_us += prefillTimer.durationInUs();
+     mMeta->sync();
+@@ -3632,6 +3667,7 @@
+         mContext->status = LlmStatus::INTERNAL_ERROR;
+         return false;
+     }
++
+ 
+     // Decode-step inputs: fixed shapes, only the position value changes per frame.
+     VARP decodeMask = buildAttentionMask(talkerMaskRequest(1), backendType);
+@@ -3655,10 +3691,60 @@
+         cpDecodePos = makeTensorInput<int>({1, 1});
+     }
+ 
++    // The official tokenizer's chunked_decode uses a causal left context and
++    // removes exactly context_frames * total_upsample samples. Here the same
++    // operation runs while codec generation is still in progress (not after WAV).
++    int emittedFrames = 0;
++    int samplesPerFrame = 0;
++    int64_t incrementalAudioUs = 0;
++    auto emitFrames = [&](int endFrame, bool final) -> bool {
++        if (cancelled()) return false;
++        if (endFrame == emittedFrames) {
++            if (mTtsProgressCallback) mTtsProgressCallback(endFrame, final);
++            return !final || mWavformCallback(nullptr, 0, true);
++        }
++        const int contextFrames = std::min(emittedFrames, std::max(0, mTtsLeftContextFrames));
++        const int beginFrame = emittedFrames - contextFrames;
++        const int decodeFrames = endFrame - beginFrame;
++        auto codes = makeTensorInput<int>({1, codeGroups, decodeFrames});
++        auto ptr = codes->writeMap<int>();
++        for (int g = 0; g < codeGroups; ++g) for (int t = 0; t < decodeFrames; ++t)
++            ptr[g * decodeFrames + t] = generatedCodes[(beginFrame + t) * codeGroups + g];
++        MNN::Timer audioTimer;
++        auto outputs = mQwen3SpeechDecoder->onForward({codes});
++        if (outputs.size() != 1 || !outputs[0]->getInfo() || !outputs[0]->readMap<float>()) {
++            mContext->status = LlmStatus::INTERNAL_ERROR; return false;
++        }
++        const auto* info = outputs[0]->getInfo();
++        const int count = info->size;
++        const int ratio = count / decodeFrames;
++        if (ratio <= 0 || count % decodeFrames || (samplesPerFrame && ratio != samplesPerFrame)) {
++            MNN_ERROR("[Error]: inconsistent qwen3_tts streaming upsample: %d / %d\n", count, decodeFrames);
++            mContext->status = LlmStatus::INTERNAL_ERROR; return false;
++        }
++        samplesPerFrame = ratio;
++        const float* pcm = outputs[0]->readMap<float>() + contextFrames * ratio;
++        const int freshSamples = (endFrame - emittedFrames) * ratio;
++        const int64_t audioUs = audioTimer.durationInUs();
++        incrementalAudioUs += audioUs;
++        mContext->audio_us += audioUs;
++        if (cancelled()) return false;
++        if (mTtsProgressCallback) mTtsProgressCallback(endFrame, final);
++        if (!mWavformCallback(pcm, freshSamples, final)) {
++            mContext->status = LlmStatus::USER_CANCEL; return false;
++        }
++        emittedFrames = endFrame;
++        mContext->tts_pcm_frames = emittedFrames;
++        return true;
++    };
+     MNN::Timer decodeTimer;
++    bool prtsObservedCodecEos = false;
+     for (int step = 0; step < maxFrames; ++step) {
++        if (cancelled()) return false;
+         int firstCode = mSampler->sample(talkerOutputs[0], firstCodeCandidates);
+         if (firstCode == codecEosToken) {
++            prtsObservedCodecEos = true;
++            mContext->tts_codec_eos = true;
+             break;
+         }
+         if (firstCode < 0) {
+@@ -3694,6 +3780,7 @@
+             int token = sample(cpOutputs[0], 0, 2048);
+             frameCodes[1] = token < 0 ? 0 : token;
+             for (int group = 2; group < codeGroups; ++group) {
++                if (cancelled()) return false;
+                 auto cpStep    = makeTensorInput<float>({1, 1, hiddenSize});
+                 auto stepPtr   = cpStep->writeMap<float>();
+                 mQwen3AudioCodePredictorEmbedding->embedding(
+@@ -3714,6 +3801,7 @@
+             }
+         } else {
+             for (int group = 1; group < codeGroups; ++group) {
++                if (cancelled()) return false;
+                 auto audioCodePredictorEmbeds =
+                     makeQwen3AudioCodePredictorCodecEmbeds(mDiskEmbedding.get(), mQwen3AudioCodePredictorEmbedding.get(),
+                                                       frameCodes, codeGroups,
+@@ -3739,6 +3827,9 @@
+         generatedCodes.insert(generatedCodes.end(), frameCodes.begin(), frameCodes.end());
+         mContext->output_tokens.insert(mContext->output_tokens.end(), frameCodes.begin(), frameCodes.end());
+         mContext->gen_seq_len = step + 1;
++        if (mTtsChunkFrames > 0 && step + 1 - emittedFrames >= mTtsChunkFrames) {
++            if (!emitFrames(step + 1, false)) return false;
++        }
+ 
+         if (step + 1 >= maxFrames) {
+             break;
+@@ -3777,13 +3868,25 @@
+         }
+         seqLen += 1;
+     }
+-    mContext->decode_us += decodeTimer.durationInUs();
++    mContext->decode_us += std::max<int64_t>(0, decodeTimer.durationInUs() - incrementalAudioUs);
+ 
+     int frames = static_cast<int>(generatedCodes.size() / codeGroups);
++    if (!prtsObservedCodecEos) {
++        // A frame cap is incomplete speech. Do not decode a giant capped tensor
++        // or emit a fake final chunk. Already streamed PCM remains partial.
++        mContext->status = LlmStatus::MAX_TOKENS_FINISHED;
++        return false;
++    }
++    if (cancelled()) return false;
+     if (frames <= 0) {
+         MNN_ERROR("[Error]: no qwen3_tts codec frame generated\n");
+         mContext->status = LlmStatus::INTERNAL_ERROR;
+         return false;
++    }
++    if (mTtsChunkFrames > 0) {
++        const bool ok = emitFrames(frames, true);
++        if (ok) mContext->status = LlmStatus::NORMAL_FINISHED;
++        return ok;
+     }
+     auto decoderCodes = makeTensorInput<int>({1, codeGroups, frames});
+     auto codePtr = decoderCodes->writeMap<int>();
+@@ -3802,7 +3905,10 @@
+         return false;
+     }
+     auto info = wavOutputs[0]->getInfo();
++    if (cancelled()) return false;
++    if (mTtsProgressCallback) mTtsProgressCallback(frames, true);
+     bool callbackOk = mWavformCallback(wavOutputs[0]->readMap<float>(), info->size, true);
++    if (callbackOk) mContext->tts_pcm_frames = frames;
+     mContext->status = callbackOk ? LlmStatus::NORMAL_FINISHED : LlmStatus::USER_CANCEL;
+     return callbackOk;
+ }
+--- a/transformers/llm/engine/include/llm/llm.hpp
++++ b/transformers/llm/engine/include/llm/llm.hpp
+@@ -142,6 +142,10 @@
+     std::string generate_str;
+     // llm status
+     LlmStatus status = LlmStatus::NOT_LOADED;
++    // PRTS: actual codec/EOS/cancellation evidence, owned by the generation worker.
++    bool tts_codec_eos = false;
++    bool tts_cancel_observed = false;
++    int tts_pcm_frames = 0;
+     // log buffer (per-instance, no locking needed)
+     std::string log_buffer;
+     // Guards history_tokens / output_tokens / generate_str / end_with against
+@@ -222,10 +226,21 @@
+     }
+     virtual void setWavformCallback(std::function<bool(const float*, size_t, bool)> callback) {}
+     virtual void generateWavform() {}
++    // These callbacks are installed/cleared on the same serialized generation worker.
++    // The cancellation predicate may read an external atomic, never reset the runtime.
++    void setTtsCancelCallback(std::function<bool()> callback) { mTtsCancelCallback = std::move(callback); }
++    void setTtsProgressCallback(std::function<void(int, bool)> callback) { mTtsProgressCallback = std::move(callback); }
++    void configureTtsStreaming(int chunkFrames, int leftContextFrames = 25) {
++        mTtsChunkFrames = chunkFrames; mTtsLeftContextFrames = leftContextFrames;
++    }
+     virtual bool generateTTS(const std::string& text, const std::string& language = "english", int max_new_tokens = -1,
+                              const std::string& ref_audio = "");
+ 
+ protected:
++    std::function<bool()> mTtsCancelCallback;
++    std::function<void(int, bool)> mTtsProgressCallback;
++    int mTtsChunkFrames = 0;
++    int mTtsLeftContextFrames = 25;
+     void setChatTemplate();
+     void initRuntime();
+     void setRuntimeHint(std::shared_ptr<Express::Executor::RuntimeManager> &rtg, bool mllm = false);

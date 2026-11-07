@@ -1,0 +1,426 @@
+plugins {
+    id 'com.android.application' version '8.5.2'
+    id 'org.jetbrains.kotlin.android' version '1.9.24'
+    id 'org.jetbrains.kotlin.plugin.serialization' version '1.9.24'
+}
+
+def externalSetting = { String property, String environment ->
+    providers.gradleProperty(property).orElse(providers.environmentVariable(environment)).orNull
+}
+def signingStore = externalSetting('dshSigningStore', 'DSH_ANDROID_KEYSTORE')
+def signingPasswordFile = externalSetting('dshSigningPasswordFile', 'DSH_ANDROID_STORE_PASSWORD_FILE')
+if ((signingStore != null) != (signingPasswordFile != null)) {
+    throw new GradleException('Set both the external release keystore and password-file paths, or leave both unset for an unsigned release')
+}
+def nativeInputs = rootProject.layout.projectDirectory.dir('.native-deps')
+def audio8Deps = file(externalSetting('dshAudio8Deps', 'DSH_AUDIO8_DEPS') ?: nativeInputs.dir('audio8').asFile.absolutePath)
+def mossSentencePiece = externalSetting('dshMossSentencePieceSourceDir', 'DSH_MOSS_SENTENCEPIECE_SOURCE_DIR')
+def audio8Gpu = providers.gradleProperty('dshAudio8Gpu').map { it.toBoolean() }.getOrElse(false)
+def mnnSource = externalSetting('dshAudio8MnnSourceDir', 'DSH_AUDIO8_MNN_SOURCE_DIR')
+def mnnArchive = externalSetting('dshAudio8MnnArchive', 'DSH_AUDIO8_MNN_ARCHIVE')
+if (audio8Gpu && (mnnSource == null || mnnArchive == null)) {
+    throw new GradleException('Audio8 GPU builds require dshAudio8MnnSourceDir and dshAudio8MnnArchive')
+}
+def ttsEdition = providers.gradleProperty('dshTtsEdition').getOrElse('local')
+if (!(ttsEdition in ['local', 'external'])) { throw new GradleException('dshTtsEdition must be local or external') }
+def localTtsEngine = providers.gradleProperty('dshLocalTtsEngine').getOrElse('moss')
+if (!(localTtsEngine in ['moss', 'audio8'])) { throw new GradleException('dshLocalTtsEngine must be moss or audio8') }
+def mossModelDir = externalSetting('dshMossModelDir', 'DSH_MOSS_MODEL_DIR')
+def bundleMoss = ttsEdition == 'local' && localTtsEngine == 'moss'
+def bundleAudio8 = ttsEdition == 'local' && localTtsEngine == 'audio8'
+if (bundleMoss && (mossModelDir == null || mossSentencePiece == null)) {
+    throw new GradleException('Local MOSS requires DSH_MOSS_MODEL_DIR and DSH_MOSS_SENTENCEPIECE_SOURCE_DIR')
+}
+if (!bundleMoss && mossModelDir != null) {
+    throw new GradleException('Bundled MOSS models require the local MOSS edition')
+}
+def mossVoices = ['whale', 'ellen'].collectEntries { role ->
+    [(role): bundleMoss ? new File(file(mossModelDir), "voices/${role}.json").length() : 0L]
+}
+def audio8GpuCodecSetting = externalSetting('dshAudio8GpuCodecFile', 'DSH_AUDIO8_GPU_CODEC_FILE')
+def audio8GpuCodec = audio8GpuCodecSetting == null ? null : file(audio8GpuCodecSetting)
+def audio8RoleReferencesSetting = externalSetting('dshAudio8RoleReferencesDir', 'DSH_AUDIO8_ROLE_REFERENCES_DIR')
+def audio8RoleReferences = audio8RoleReferencesSetting == null ? null : file(audio8RoleReferencesSetting)
+def audio8GpuCodecBytes = 261764152L
+def audio8EncoderDir = externalSetting('dshAudio8EncoderDir', 'DSH_AUDIO8_ENCODER_DIR')
+def audio8EncoderPayload = ['codec_encoder_fp16.onnx': 940787L, 'codec_encoder_fp16.onnx.data': 414425088L]
+if (audio8EncoderDir != null && !bundleAudio8) {
+    throw new GradleException('The Audio8 WAV encoder requires the local edition')
+}
+if (audio8GpuCodec != null && (!audio8Gpu || !bundleAudio8)) {
+    throw new GradleException('A bundled Audio8 GPU codec requires the local edition and dshAudio8Gpu=true')
+}
+if (audio8RoleReferences != null && !bundleAudio8) {
+    throw new GradleException('Bundled Audio8 role references require the local edition')
+}
+
+def deploymentTestApplicationId = providers.gradleProperty('deploymentTestApplicationId').orNull
+if (deploymentTestApplicationId != null && deploymentTestApplicationId != 'com.prts.client.deploytest') {
+    throw new GradleException('The separate installation check uses only com.prts.client.deploytest')
+}
+
+def audio8QnnLibs = externalSetting('dshAudio8QnnLibs', 'DSH_AUDIO8_QNN_LIBS')
+def audio8QnnModelsSetting = externalSetting('dshAudio8QnnModels', 'DSH_AUDIO8_QNN_MODELS')
+def audio8QnnModels = audio8QnnModelsSetting == null ? null : file(audio8QnnModelsSetting)
+def audio8NpuBundled = audio8QnnLibs != null && audio8QnnModels != null
+def audio8QnnPayloadSizes = ['decoder.onnx': 532566L, 'weights_f32.data': 521520664L]
+if ((audio8QnnLibs != null) != (audio8QnnModels != null) || (audio8NpuBundled && !bundleAudio8)) {
+    throw new GradleException('Bundled Audio8 NPU needs both QNN libraries and C12 decoder assets in a local build')
+}
+
+android {
+    namespace 'com.prts.client'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId = deploymentTestApplicationId ?: 'com.prts.client'
+        ndk { abiFilters 'arm64-v8a' }
+        minSdk 26
+        targetSdk 34
+        versionCode 74
+        versionName "0.0.1"
+        buildConfigField 'String', 'TTS_EDITION', '"' + ttsEdition + '"'
+        buildConfigField 'String', 'DEFAULT_TTS_BACKEND', ttsEdition == 'external' ? '"openai_speech_api"' : '"local_audio8"'
+        buildConfigField 'String', 'DEFAULT_LOCAL_TTS_ENGINE', bundleMoss ? '"moss_nano"' : '"audio8"'
+        buildConfigField 'boolean', 'MOSS_MODEL_BUNDLED', bundleMoss.toString()
+        buildConfigField 'long', 'MOSS_WHALE_VOICE_BYTES', mossVoices.whale.toString() + 'L'
+        buildConfigField 'long', 'MOSS_ELLEN_VOICE_BYTES', mossVoices.ellen.toString() + 'L'
+        buildConfigField 'boolean', 'AUDIO8_MODEL_BUNDLED', bundleAudio8.toString()
+        buildConfigField 'boolean', 'AUDIO8_GPU_DEFAULT', (audio8GpuCodec != null).toString()
+        buildConfigField 'boolean', 'AUDIO8_NPU_BUNDLED', audio8NpuBundled.toString()
+        buildConfigField 'boolean', 'AUDIO8_ENCODER_BUNDLED', (audio8EncoderDir != null).toString()
+        testApplicationId 'com.prts.client.voicecheck'
+        testInstrumentationRunner project.findProperty('prtsTestRunner') ?: "com.prts.client.voicecheck.Audio8AppInstrumentation"
+        externalNativeBuild {
+            cmake {
+                arguments "-DANDROID_STL=c++_shared", "-DDSH_AUDIO8_DEPS=${audio8Deps.absolutePath}",
+                    "-DDSH_AUDIO8_GPU=${audio8Gpu ? 'ON' : 'OFF'}"
+                arguments("-DDSH_MOSS_SENTENCEPIECE_SOURCE_DIR=" + (mossSentencePiece ?: ''))
+                if (audio8NpuBundled) arguments '-DDSH_AUDIO8_QNN=ON'
+                if (audio8Gpu) arguments "-DDSH_AUDIO8_MNN_SOURCE_DIR=${mnnSource}", "-DDSH_AUDIO8_MNN_ARCHIVE=${mnnArchive}"
+            }
+        }
+    }
+
+    testBuildType 'release'
+
+    signingConfigs {
+        if (signingStore != null) {
+            create('externalRelease') {
+                storeFile file(signingStore)
+                storePassword file(signingPasswordFile).getText('UTF-8').trim()
+                keyAlias = externalSetting('dshSigningAlias', 'DSH_ANDROID_KEY_ALIAS') ?: 'dsh-l2d-release'
+                def keyPasswordFile = externalSetting('dshSigningKeyPasswordFile', 'DSH_ANDROID_KEY_PASSWORD_FILE')
+                keyPassword = keyPasswordFile != null ? file(keyPasswordFile).getText('UTF-8').trim() : storePassword
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            debuggable false
+            if (signingStore != null) { signingConfig signingConfigs.externalRelease }
+            minifyEnabled false
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions { jvmTarget = '17' }
+    androidResources { noCompress += ['bin', 'json', 'mnn', 'txt', 'weight'] }
+    buildFeatures { viewBinding true; buildConfig true }
+
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            version '3.22.1'
+        }
+    }
+    ndkVersion "26.3.11579264"
+
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging true
+            if (audio8NpuBundled) keepDebugSymbols += ['**/libQnn*.so', '**/libonnxruntime_providers_qnn.so']
+        }
+        resources { merges += ['META-INF/CONTRIBUTORS.md', 'META-INF/LICENSE.md', 'META-INF/NOTICE.md'] }
+    }
+}
+
+if (audio8NpuBundled) android.sourceSets.main.jniLibs.srcDir(file(audio8QnnLibs))
+
+if (mossSentencePiece != null) {
+    def mossNotices = layout.buildDirectory.dir('generated/mossNotices')
+    def mossLicenses = [
+        'LICENSE': 'SentencePiece-LICENSE.txt',
+        'third_party/absl/LICENSE': 'Abseil-LICENSE.txt',
+        'third_party/protobuf-lite/LICENSE': 'protobuf-lite-LICENSE.txt',
+        'third_party/darts_clone/LICENSE': 'Darts-clone-LICENSE.txt',
+        'third_party/esaxx/LICENSE': 'esaxx-LICENSE.txt'
+    ]
+    def prepareMossNotices = tasks.register('prepareMossNotices', Sync) {
+        mossLicenses.each { source, target ->
+            from(new File(file(mossSentencePiece), source)) {
+                rename { target }
+                into 'licenses/moss'
+            }
+        }
+        into(mossNotices)
+        doFirst {
+            mossLicenses.keySet().each { source ->
+                if (!new File(file(mossSentencePiece), source).isFile()) {
+                    throw new GradleException('Missing original SentencePiece license: ' + source)
+                }
+            }
+        }
+    }
+    android.sourceSets.main.assets.srcDir(mossNotices)
+    tasks.matching { it.name in ['preBuild', 'mergeDebugAssets', 'mergeReleaseAssets'] }.configureEach {
+        dependsOn(prepareMossNotices)
+    }
+}
+
+configurations { mediaPipeOriginalNotice { transitive = false } }
+
+dependencies {
+    implementation 'androidx.javascriptengine:javascriptengine:1.0.0'
+    implementation 'com.google.mediapipe:tasks-vision:1.1.0'
+    implementation 'com.atilika.kuromoji:kuromoji-core:0.9.0'
+    implementation 'com.atilika.kuromoji:kuromoji-ipadic:0.9.0'
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.activity:activity-ktx:1.9.0'
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.4'
+    mediaPipeOriginalNotice 'com.google.mediapipe:tasks-core:1.1.0@aar'
+}
+
+// MediaPipe's full NOTICE is at the AAR root, not in classes.jar's Java resources.
+// Both pinned AAR notices are identical; retain one unmodified original in assets.
+def mediaPipeNoticeAssets = layout.buildDirectory.dir('generated/mediapipeOriginalNoticeAssets')
+def prepareMediaPipeOriginalNotice = tasks.register('prepareMediaPipeOriginalNotice', Sync) {
+    from({ zipTree(configurations.mediaPipeOriginalNotice.singleFile) }) {
+        include 'META-INF/NOTICE'
+        eachFile { path = 'licenses/mediapipe-third-party-NOTICE.txt' }
+        includeEmptyDirs = false
+    }
+    into(mediaPipeNoticeAssets)
+    doLast {
+        def original = mediaPipeNoticeAssets.get().file('licenses/mediapipe-third-party-NOTICE.txt').asFile
+        if (!original.isFile() || original.length() != 2828093L) {
+            throw new GradleException('The complete original MediaPipe 1.1.0 NOTICE was not prepared')
+        }
+    }
+}
+android.sourceSets.main.assets.srcDir(mediaPipeNoticeAssets)
+
+// Keep the original SDK, Framework and Core license/notice files unmodified.
+def cubismInputs = file(externalSetting('dshCubismInputsDir', 'DSH_CUBISM_INPUTS_DIR') ?: nativeInputs.dir('cubism').asFile.absolutePath)
+def cubismNoticeAssets = layout.buildDirectory.dir('generated/cubismNoticeAssets')
+def cubismNoticeFiles = [
+    [source: 'LICENSE.md', target: 'SDK/LICENSE.md', bytes: 3036L],
+    [source: 'NOTICE.md', target: 'SDK/NOTICE.md', bytes: 4259L],
+    [source: 'NOTICE.ja.md', target: 'SDK/NOTICE.ja.md', bytes: 5206L],
+    [source: 'Framework/LICENSE.md', target: 'Framework/LICENSE.md', bytes: 2254L],
+    [source: 'Core/LICENSE.md', target: 'Core/LICENSE.md', bytes: 520L]
+]
+def prepareCubismNoticesAssets = tasks.register('prepareCubismNoticesAssets', Sync) {
+    cubismNoticeFiles.each { row ->
+        from(new File(cubismInputs, row.source)) {
+            eachFile { path = row.target }
+            includeEmptyDirs = false
+        }
+    }
+    into(cubismNoticeAssets.map { it.dir('licenses/cubism') })
+    doFirst {
+        cubismNoticeFiles.each { row ->
+            def original = new File(cubismInputs, row.source)
+            if (!original.isFile() || original.length() != row.bytes) {
+                throw new GradleException('Missing original Cubism 5-r.4 license/notice: ' + row.source)
+            }
+        }
+    }
+    doLast {
+        cubismNoticeFiles.each { row ->
+            def original = new File(cubismInputs, row.source)
+            def copied = cubismNoticeAssets.get().file('licenses/cubism/' + row.target).asFile
+            if (!copied.isFile() || !java.util.Arrays.equals(original.bytes, copied.bytes)) {
+                throw new GradleException('Cubism license/notice copy changed: ' + row.source)
+            }
+        }
+    }
+}
+android.sourceSets.main.assets.srcDir(cubismNoticeAssets)
+def externalAssets = externalSetting('dshAssetsDir', 'DSH_ANDROID_ASSETS_DIR')
+if (externalAssets != null) {
+    def generatedAssets = layout.buildDirectory.dir('generated/externalAssets')
+    def prepareExternalAssets = tasks.register('prepareExternalAssets', Sync) {
+        from(file(externalAssets)) { exclude 'qwen3-tts/**', 'audio8/**', 'moss/payload/**' }
+        into(generatedAssets)
+    }
+    android.sourceSets.main.assets.srcDir(generatedAssets)
+    tasks.matching { it.name in ['preBuild', 'mergeDebugAssets', 'mergeReleaseAssets'] }.configureEach {
+        dependsOn(prepareExternalAssets)
+    }
+}
+tasks.named('preBuild').configure { dependsOn(prepareMediaPipeOriginalNotice) }
+tasks.named('preBuild').configure { dependsOn(prepareCubismNoticesAssets) }
+tasks.matching { it.name in ['mergeDebugAssets', 'mergeReleaseAssets'] }.configureEach {
+    dependsOn(prepareMediaPipeOriginalNotice)
+    dependsOn(prepareCubismNoticesAssets)
+}
+
+
+if (bundleMoss) {
+    def modelDir = file(mossModelDir)
+    def payload = [
+        'MOSS-TTS-Nano-100M-ONNX/browser_poc_manifest.json': 503354L,
+        'MOSS-TTS-Nano-100M-ONNX/moss_tts_decode_step.onnx': 489413L,
+        'MOSS-TTS-Nano-100M-ONNX/moss_tts_global_shared_int8.data': 110512128L,
+        'MOSS-TTS-Nano-100M-ONNX/moss_tts_local_fixed_sampled_frame.onnx': 744178L,
+        'MOSS-TTS-Nano-100M-ONNX/moss_tts_local_fixed_sampled_frame_int8.data': 84974592L,
+        'MOSS-TTS-Nano-100M-ONNX/moss_tts_prefill.onnx': 477742L,
+        'MOSS-TTS-Nano-100M-ONNX/tokenizer.model': 470897L,
+        'MOSS-Audio-Tokenizer-Nano-ONNX/moss_audio_tokenizer_decode_full.onnx': 681902L,
+        'MOSS-Audio-Tokenizer-Nano-ONNX/moss_audio_tokenizer_decode_shared.data': 44198912L,
+    ] + mossVoices.collectEntries { role, size -> [("voices/${role}.json"): size] }
+    def generated = layout.buildDirectory.dir('generated/mossPayloadAssets')
+    def prepareMossPayload = tasks.register('prepareMossPayload', Sync) {
+        from(modelDir) {
+            include payload.keySet()
+            into 'moss/payload'
+        }
+        into(generated)
+        doFirst {
+            payload.each { name, size ->
+                def input = new File(modelDir, name)
+                if (!input.isFile() || size <= 0 || input.length() != size) {
+                    throw new GradleException('Missing MOSS input: ' + name)
+                }
+            }
+            mossVoices.each { role, size ->
+                if (size > 65536L) throw new GradleException('Invalid MOSS role voice size: ' + role)
+                def prompt = new groovy.json.JsonSlurper().parse(new File(modelDir, "voices/${role}.json"))
+                def frames = prompt.prompt_audio_codes
+                if (prompt.voice != role || !(frames instanceof List) || frames.isEmpty() || frames.size() > 256 ||
+                    !frames.every { it instanceof List && it.size() == 16 &&
+                        it.every { token -> token instanceof Integer && token >= 0 && token <= 1023 } }) {
+                    throw new GradleException('Invalid MOSS role voice: ' + role)
+                }
+            }
+        }
+        doLast {
+            payload.each { name, size ->
+                def target = generated.get().file('moss/payload/' + name).asFile
+                if (!target.isFile() || target.length() != size) {
+                    throw new GradleException('MOSS payload copy failed: ' + name)
+                }
+            }
+        }
+    }
+    android.sourceSets.main.assets.srcDir(generated)
+    tasks.matching { it.name in ['preBuild', 'mergeDebugAssets', 'mergeReleaseAssets'] }.configureEach { dependsOn(prepareMossPayload) }
+}
+
+// Explicit local Audio8 builds use the existing optional payload.
+if (bundleAudio8) {
+    def models = file(externalSetting('dshAudio8Models', 'DSH_AUDIO8_MODEL_DIR') ?: new File(audio8Deps, 'model'))
+    def references = externalSetting('dshAudio8References', 'DSH_AUDIO8_REFERENCE_DIR')
+    def referenceFiles = ['reference.json', 'reference.codes.i64.bin']
+    def referenceRoles = audio8RoleReferences == null ? [] : ['whale', 'ellen'].findAll {
+        new File(audio8RoleReferences, it).exists()
+    }
+    def manifest = new groovy.json.JsonSlurper().parse(file('src/main/assets/audio8/model-manifest.json'))
+    def generated = layout.buildDirectory.dir('generated/audio8PayloadAssets')
+    def prepareAudio8Payload = tasks.register('prepareAudio8Payload', Sync) {
+        manifest.files.each { row ->
+            def source = new File(models, row.path.substring('model/'.length()))
+            from(source) { eachFile { path = 'audio8/payload/' + row.path }; includeEmptyDirs = false }
+        }
+        if (references != null) {
+            from(file(references)) {
+                include 'reference.json', 'reference.codes.i64.bin'
+                into 'audio8/payload/inputs'
+            }
+        }
+        referenceRoles.each { role ->
+            from(new File(audio8RoleReferences, role)) {
+                include referenceFiles
+                into 'audio8/payload/roles/' + role
+            }
+        }
+        if (audio8GpuCodec != null) {
+            from(audio8GpuCodec) {
+                rename { 'codec_incremental_f32_c12.mnn' }
+                into 'audio8/payload/gpu'
+            }
+        }
+        if (audio8EncoderDir != null) {
+            audio8EncoderPayload.keySet().each { name ->
+                from(new File(file(audio8EncoderDir), name)) { into 'audio8/payload/encoder' }
+            }
+        }
+        if (audio8NpuBundled) {
+            audio8QnnPayloadSizes.keySet().each { name ->
+                from(new File(audio8QnnModels, name)) {
+                    into 'audio8/payload/qnn'
+                }
+            }
+        }
+        into(generated)
+        doFirst {
+            if (audio8EncoderDir != null) audio8EncoderPayload.each { name, bytes ->
+                def source = new File(file(audio8EncoderDir), name)
+                if (!source.isFile() || source.length() != bytes) throw new GradleException('Missing Audio8 encoder asset: ' + name)
+            }
+            if (audio8NpuBundled) audio8QnnPayloadSizes.each { name, bytes ->
+                def source = new File(audio8QnnModels, name)
+                if (!source.isFile() || source.length() != bytes) throw new GradleException('Missing Audio8 NPU asset: ' + name)
+            }
+            manifest.files.each { row ->
+                def source = new File(models, row.path.substring('model/'.length()))
+                if (!source.isFile() || source.length() != row.bytes) throw new GradleException('Missing Audio8 input: ' + row.path)
+            }
+            if (references != null && referenceFiles.any { !new File(references, it).isFile() }) {
+                throw new GradleException('A personal Audio8 reference requires reference.json and reference.codes.i64.bin')
+            }
+            if (audio8RoleReferences != null && referenceRoles.isEmpty()) {
+                throw new GradleException('The Audio8 role reference directory must contain whale or ellen')
+            }
+            referenceRoles.each { role ->
+                if (referenceFiles.any { !new File(audio8RoleReferences, role + '/' + it).isFile() }) {
+                    throw new GradleException('The Audio8 reference for ' + role + ' requires reference.json and reference.codes.i64.bin')
+                }
+            }
+            if (audio8GpuCodec != null && (!audio8GpuCodec.isFile() || audio8GpuCodec.length() != audio8GpuCodecBytes)) {
+                throw new GradleException('The bundled Audio8 GPU codec must be the 261764152-byte c12 model')
+            }
+        }
+        doLast {
+            if (audio8EncoderDir != null) audio8EncoderPayload.each { name, bytes ->
+                def target = generated.get().file('audio8/payload/encoder/' + name).asFile
+                if (!target.isFile() || target.length() != bytes) throw new GradleException('Audio8 encoder asset copy failed: ' + name)
+            }
+            if (audio8NpuBundled) audio8QnnPayloadSizes.each { name, bytes ->
+                def target = generated.get().file('audio8/payload/qnn/' + name).asFile
+                if (!target.isFile() || target.length() != bytes) throw new GradleException('Audio8 NPU asset copy failed: ' + name)
+            }
+            manifest.files.each { row ->
+                def target = generated.get().file('audio8/payload/' + row.path).asFile
+                if (!target.isFile() || target.length() != row.bytes) throw new GradleException('Audio8 payload copy failed: ' + row.path)
+            }
+            if (audio8GpuCodec != null) {
+                def target = generated.get().file('audio8/payload/gpu/codec_incremental_f32_c12.mnn').asFile
+                if (!target.isFile() || target.length() != audio8GpuCodecBytes) {
+                    throw new GradleException('Audio8 GPU codec payload copy failed')
+                }
+            }
+        }
+    }
+    android.sourceSets.main.assets.srcDir(generated)
+    tasks.matching { it.name in ['preBuild', 'mergeDebugAssets', 'mergeReleaseAssets'] }.configureEach { dependsOn(prepareAudio8Payload) }
+}

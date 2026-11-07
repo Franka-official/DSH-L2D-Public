@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ui_text">#FAFBFF</color>
+    <color name="ui_text_secondary">#CAD5E5</color>
+    <color name="ui_text_muted">#9DACC2</color>
+    <color name="ui_accent">#B6E9E9</color>
+    <color name="ui_accent_ink">#233E4A</color>
+    <color name="ui_danger">#F38B9F</color>
+    <color name="ui_background">#101925</color>
+</resources>
+

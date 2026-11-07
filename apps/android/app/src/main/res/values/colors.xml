@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg_deep">#0B1016</color>
+    <color name="bg_panel">#141B24</color>
+    <color name="accent">#7FD8C4</color>
+    <color name="accent_dim">#3E6F65</color>
+    <color name="text_main">#E8EEF2</color>
+    <color name="text_sub">#8FA0AC</color>
+    <color name="bubble_me">#1F3A44</color>
+    <color name="bubble_ai">#18222C</color>
+    <color name="danger">#E06C75</color>
+
+    <!-- 清透白·磨砂色板 -->
+    <color name="frost_fill">#4DFFFFFF</color>
+    <color name="frost_fill_strong">#66FFFFFF</color>
+    <color name="frost_stroke">#8CFFFFFF</color>
+    <color name="frost_text_main">#EBFFFFFF</color>
+    <color name="frost_text_sub">#8CFFFFFF</color>
+    <color name="frost_danger">#66E06C75</color>
+</resources>

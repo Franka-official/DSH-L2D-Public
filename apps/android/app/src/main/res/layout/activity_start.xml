@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/rootStart" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@color/ui_background">
+    <ImageView android:id="@+id/bgImage" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:scaleType="centerCrop" android:src="@drawable/ui_bg_aurora" android:contentDescription="@null"/>
+    <FrameLayout android:id="@+id/charPreviewHost" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:contentDescription="通话角色预览"/>
+    <View android:layout_width="match_parent" android:layout_height="match_parent"
+        android:background="@drawable/ui_start_scrim" android:importantForAccessibility="no"/>
+    <LinearLayout android:id="@+id/startHeader" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:layout_marginHorizontal="24dp" android:layout_marginTop="44dp">
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+            android:orientation="vertical">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="见面之前"
+                android:textColor="@color/ui_text_secondary" android:textSize="12sp" android:letterSpacing="0.08"/>
+            <TextView android:id="@+id/titleName" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="6dp" android:text="鲸鱼娘" android:textSize="28sp"
+                android:textColor="@color/ui_text" android:fontFamily="sans-serif-medium"/>
+        </LinearLayout>
+        <ImageButton android:id="@+id/btnSettings" android:layout_width="48dp" android:layout_height="48dp"
+            android:padding="13dp" android:background="@drawable/ui_glass_button" android:src="@drawable/ui_ic_settings"
+            android:contentDescription="设置连接、角色和背景"/>
+    </LinearLayout>
+    <LinearLayout android:id="@+id/startControls" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="bottom" android:layout_marginHorizontal="22dp" android:layout_marginBottom="28dp"
+        android:orientation="vertical" android:padding="18dp" android:background="@drawable/ui_glass_panel">
+        <TextView android:id="@+id/statusText" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:gravity="center" android:text="正在准备角色" android:textColor="@color/ui_text_secondary"
+            android:textSize="12sp" android:lineSpacingExtra="3dp"/>
+        <com.google.android.material.button.MaterialButton android:id="@+id/btnStart" style="@style/PRTS.Button"
+            android:layout_width="match_parent" android:layout_height="56dp" android:layout_marginTop="13dp"
+            android:text="开始通话" android:textSize="16sp" android:fontFamily="sans-serif-medium"
+            android:textColor="@color/ui_accent_ink" app:backgroundTint="@color/ui_accent" app:cornerRadius="28dp"/>
+    </LinearLayout>
+</FrameLayout>

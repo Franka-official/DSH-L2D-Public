@@ -1,0 +1,164 @@
+--- host36/app/src/main/java/com/prts/client/ui/StartActivity.kt
++++ clean-staging/app/src/main/java/com/prts/client/ui/StartActivity.kt
+@@ -1,7 +1,6 @@
+ package com.prts.client.ui
+ 
+ import android.content.Intent
+-import android.content.pm.ApplicationInfo
+ import android.os.Bundle
+ import android.os.Handler
+ import android.os.Looper
+@@ -52,7 +51,6 @@
+     private var foreground = false
+     private var bundledVoiceReady = false
+     private var modelPreparation: AutoCloseable? = null
+-    private var faceFixtureRunning = false
+     private var importingBackground = false
+     private var importingCharacter = false
+     private var characters = emptyList<CharacterItem>()
+@@ -148,36 +146,22 @@
+ 
+     override fun onCreate(savedInstanceState: Bundle?) {
+         super.onCreate(savedInstanceState)
+-        val debug = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+-        val reviewLanguage = intent.getStringExtra("review_cosy_language")
+-        if (debug && reviewLanguage in setOf("zh", "ja")) {
+-            startActivity(Intent(this, CosyVoiceReviewActivity::class.java).apply {
+-                putExtra("review_cosy_language", reviewLanguage)
+-                intent.getStringExtra("review_cosy_text")?.let { putExtra("review_cosy_text", it) }
+-                putExtra("review_cosy_play", intent.getBooleanExtra("review_cosy_play", false))
+-            }); finish(); return
+-        }
+         b = ActivityStartBinding.inflate(layoutInflater); setContentView(b.root)
+         bgLib = BackgroundLibrary(this); background = BackgroundPresenter(this, b.bgImage)
+         charLib = CharacterLibrary(this); background.showSelected()
+-        faceFixtureRunning = savedInstanceState == null && debug && intent.getBooleanExtra("review_face_fixture", false)
+-        intent.removeExtra("review_face_fixture")
+         b.btnStart.isEnabled = false; b.btnSettings.isEnabled = false
+         worker.execute {
+             val ready = runCatching { charLib.all() }.getOrDefault(emptyList())
+             runOnUiThread {
+                 if (isFinishing || isDestroyed) return@runOnUiThread
+                 characters = ready; b.btnSettings.isEnabled = true
+-                b.btnStart.isEnabled = ready.isNotEmpty() && !faceFixtureRunning && bundledVoiceReady
+-                if (!faceFixtureRunning) applyCharacterPreview()
++                b.btnStart.isEnabled = ready.isNotEmpty() && bundledVoiceReady
++                applyCharacterPreview()
+             }
+         }
+         b.btnStart.setOnClickListener {
+-            if (faceFixtureRunning || characters.isEmpty() || !bundledVoiceReady) return@setOnClickListener
+-            startActivity(Intent(this, CallActivity::class.java).apply {
+-                if (debug) for (key in listOf("review_server", "review_character", "review_expression", "review_motion"))
+-                    intent.getStringExtra(key)?.let { putExtra(key, it) }
+-            })
++            if (characters.isEmpty() || !bundledVoiceReady) return@setOnClickListener
++            startActivity(Intent(this, CallActivity::class.java))
+         }
+         b.btnSettings.setOnClickListener { if (editingPlacement) finishPlacement() else showSettings() }
+         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+@@ -185,21 +169,10 @@
+                 if (editingPlacement) finishPlacement() else { isEnabled = false; onBackPressedDispatcher.onBackPressed() }
+             }
+         })
+-        if (faceFixtureRunning) {
+-            b.statusText.text = "正在运行公开样例检测，不开启相机"
+-            com.prts.client.face.FaceTrackerFixture.run(this) { ok ->
+-                faceFixtureRunning = false
+-                if (!isFinishing && !isDestroyed) {
+-                    b.statusText.text = if (ok) "本机检测测试完成" else "本机检测测试未通过"
+-                    b.btnStart.isEnabled = characters.isNotEmpty(); applyCharacterPreview()
+-                }
+-            }
+-        }
+     }
+ 
+     private fun currentCharacter(): CharacterItem? {
+-        val reviewed = if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) intent.getStringExtra("review_character") else null
+-        val stored = reviewed ?: getSharedPreferences("prts", MODE_PRIVATE).getString("character", CharacterLibrary.DEFAULT)
++        val stored = getSharedPreferences("prts", MODE_PRIVATE).getString("character", CharacterLibrary.DEFAULT)
+         return characters.firstOrNull { it.name == stored } ?: characters.firstOrNull()
+     }
+     private fun applyCharacterPreview() {
+@@ -531,7 +504,7 @@
+         modelPreparation = BundledQwenModelInstaller.observe(this) { state ->
+             if (foreground) {
+                 bundledVoiceReady = state.ready
+-                b.btnStart.isEnabled = bundledVoiceReady && characters.isNotEmpty() && !faceFixtureRunning
++                b.btnStart.isEnabled = bundledVoiceReady && characters.isNotEmpty()
+                 if (!state.ready) {
+                     val percent = if (state.totalBytes > 0) (state.processedBytes * 100 / state.totalBytes).coerceIn(0, 100) else 0
+                     b.statusText.text = if (state.error == null) "正在准备语音 · $percent%" else "语音准备失败，请检查可用存储后重试"
+--- host36/app/src/main/java/com/prts/client/ui/CallActivity.kt
++++ clean-staging/app/src/main/java/com/prts/client/ui/CallActivity.kt
+@@ -5,7 +5,6 @@
+ import android.os.Looper
+ import android.os.SystemClock
+ import android.Manifest
+-import android.content.pm.ApplicationInfo
+ import android.content.pm.PackageManager
+ import android.util.Log
+ import android.widget.Toast
+@@ -110,8 +109,6 @@
+     private var playbackCompletePending = false
+     private val localOpeningPlayback = LocalOpeningPlaybackState()
+     private var ackAttempt = 0
+-    private var debugExpression: String? = null
+-    private var debugMotion: String? = null
+     private var submittedSequence = 0L
+     private var activeLocalRequest: String? = null
+     private val replyToLocalRequest = LinkedHashMap<String, String>()
+@@ -160,10 +157,9 @@
+ 
+         background = BackgroundPresenter(this, b.bgImage).also { it.showSelected() }
+         val charLib = CharacterLibrary(this)
+-        val debuggable = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+-        val character = if (debuggable) intent.getStringExtra("review_character") ?: charLib.current() else charLib.current()
++        val character = charLib.current()
+         callCharacter = character
+-        serverUrl = (if (debuggable) intent.getStringExtra("review_server") else null) ?: Prefs.get(this).first
++        serverUrl = Prefs.get(this).first
+         try {
+             connectionProfile = ConnectionSettings.load(this)
+             replyLanguage = LocalVoiceSettings.loadReplyLanguage(this)
+@@ -179,8 +175,6 @@
+             configurationFailed = true
+             notice("连接设置无法读取，请返回设置重新填写")
+         }
+-        debugExpression = if (debuggable) intent.getStringExtra("review_expression") else null
+-        debugMotion = if (debuggable) intent.getStringExtra("review_motion") else null
+         b.callName.text = charLib.resolve(character)?.displayName ?: character
+         startedAt = SystemClock.elapsedRealtime()
+ 
+@@ -867,11 +861,9 @@
+             if (state == "open") {
+                 providerReady = false
+                 val profile = connectionProfile
+-                val isReview = intent.getStringExtra("review_server") != null &&
+-                    applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+                 if (configurationFailed || profile == null) {
+                     connectionState = "连接设置需要重新填写"
+-                } else if (profile.usesLegacyCallSocket || isReview) {
++                } else if (profile.usesLegacyCallSocket) {
+                     val config = Prefs.getConfig(this)
+                     if (config.isNotBlank() && config != "default") ws.switchConfig(config)
+                     providerConfigured()
+@@ -956,8 +948,6 @@
+             val transform = CharacterPresentationStore.load(this, callCharacter)
+             live2D.setPresentationTransform(transform.scale, transform.offsetX, transform.offsetY)
+             live2D.startRender()
+-            debugExpression?.let { live2D.setExpression(it) }
+-            debugMotion?.let { live2D.playMotion(it) }
+         }
+         val reuseMediaConnection = mediaSuspended && ::ws.isInitialized && ws.isReady
+         mediaSuspended = false
+--- host36/app/src/main/AndroidManifest.xml
++++ clean-staging/app/src/main/AndroidManifest.xml
+@@ -32,7 +32,6 @@
+             </intent-filter>
+         </activity>
+         <activity android:name=".ui.ChatActivity" />
+-        <activity android:name=".ui.CosyVoiceReviewActivity" android:exported="false" />
+         <activity android:name=".ui.CallActivity" android:screenOrientation="portrait" />
+ 
+ <!-- Inside application; dedicated ACTION_SEND target, never the chat input Activity. -->
