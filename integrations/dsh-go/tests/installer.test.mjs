@@ -59,10 +59,13 @@ test('same-version cleanup removes only the active package extras and retains it
   assert.equal(readdirSync(join(f.home, 'dsh-go/plugin-backups')).length, 1);
 }));
 
-for (const previousVersion of ['0.2.7', '0.2.13']) test(`${previousVersion} upgrades to ${VERSION}`, () => fixture(f => {
+for (const previousVersion of ['0.2.7', '0.2.13', '0.2.14']) test(`${previousVersion} upgrades to ${VERSION}`, () => fixture(f => {
   installRelease({...f.options, runDsh: f.register});
   const file = join(f.target, 'package.json'), metadata = JSON.parse(readFileSync(file)); metadata.version = previousVersion;
   writeFileSync(file, JSON.stringify(metadata)); writeFileSync(join(f.target, 'speech.mjs'), 'old-runtime');
+  const plan = inspectRelease(f.options).public;
+  assert.equal(plan.installed_version, previousVersion); assert.equal(plan.action, 'UPGRADE_OWN_PLUGIN');
+  assert.equal(plan.profile_points_to_owned_target, true);
   const result = installRelease({...f.options, runDsh: f.register});
   assert.equal(result.ok, true); assert.equal(result.installed_version, VERSION); assert.equal(result.runtime_code_equal, true);
   assert.equal(result.original_plugin_backup_retained, true); assert.equal(f.calls(), 1);
