@@ -2,11 +2,11 @@
 
 # DSH L2D
 
-[0.0.1 · 首次发布](https://github.com/Franka-official/DSH-L2D-Public/releases/tag/v0.0.1)
+[0.0.2 · 当前版本](https://github.com/Franka-official/DSH-L2D-Public/releases/tag/v0.0.2)
 
 **把你的对话服务接到 Android Live2D 角色。**
 
-**[下载 0.0.1 本地 TTS 完整版](https://github.com/Franka-official/DSH-L2D-Public/releases/download/v0.0.1/DSH-L2D-0.0.1-local-tts.apk)**
+**[下载 0.0.2 本地 TTS 完整版](https://github.com/Franka-official/DSH-L2D-Public/releases/download/v0.0.2/DSH-L2D-0.0.2-local-tts.apk)**
 
 [安装指南](docs/INSTALL.md) · [语音设置](docs/TTS.md) · [English](README.en.md)
 

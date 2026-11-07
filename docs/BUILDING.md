@@ -2,7 +2,7 @@
 
 [English](BUILDING.en.md) · [安装](INSTALL.md) · [语音配置](TTS.md)
 
-本页覆盖 0.0.1 的 Android 源码、完整版内置的 MOSS CPU 模型和可选 Audio8 模型包。
+本页覆盖 当前 Android 源码、完整版内置的 MOSS CPU 模型和可选 Audio8 模型包。
 
 ## 环境
 

@@ -2,11 +2,11 @@
 
 # DSH L2D
 
-[0.0.1 · Initial release](https://github.com/Franka-official/DSH-L2D-Public/releases/tag/v0.0.1)
+[0.0.2 · Latest release](https://github.com/Franka-official/DSH-L2D-Public/releases/tag/v0.0.2)
 
 **Connect your conversation service to a Live2D character on Android.**
 
-**[Download 0.0.1 Local TTS Full](https://github.com/Franka-official/DSH-L2D-Public/releases/download/v0.0.1/DSH-L2D-0.0.1-local-tts.apk)**
+**[Download 0.0.2 Local TTS Full](https://github.com/Franka-official/DSH-L2D-Public/releases/download/v0.0.2/DSH-L2D-0.0.2-local-tts.apk)**
 
 [Installation](docs/INSTALL.en.md) · [Speech setup](docs/TTS.md) · [简体中文](README.md)
 

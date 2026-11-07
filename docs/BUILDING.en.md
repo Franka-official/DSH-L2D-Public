@@ -2,7 +2,7 @@
 
 [简体中文](BUILDING.md) · [Installation](INSTALL.en.md) · [Speech setup](TTS.md)
 
-This guide covers Android 0.0.1, the MOSS CPU model bundled with Local TTS Full, and optional Audio8 packages.
+This guide covers the current Android source, the MOSS CPU model bundled with Local TTS Full, and optional Audio8 packages.
 
 ## Environment
 
