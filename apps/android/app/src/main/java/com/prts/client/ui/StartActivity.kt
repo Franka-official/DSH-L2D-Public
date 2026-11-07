@@ -320,7 +320,7 @@ class StartActivity : AppCompatActivity() {
             s.connectionModeHint.text = when {
                 fingerprint != null -> "核对 Go 的标识 · $fingerprint"
                 connected -> if (LocalDshBridge.asrReady) "已连接" else "已连接 · 语音识别未就绪"
-                awaiting || running && saved -> "在 Go 的「设置」→「DSH L2D桥接」点连接，再返回确认"
+                awaiting || running && saved -> "在 Go 的「全部功能」→「DSH L2D桥接」点连接，再返回确认"
                 else -> "首次使用请先安装 Go 插件"
             }
             s.connectionModeHint.visibility = if (s.connectionModeHint.text.isNotEmpty()) View.VISIBLE else View.GONE
