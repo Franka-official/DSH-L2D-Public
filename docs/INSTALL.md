@@ -14,7 +14,7 @@
 
 | 来源 | 设置步骤 |
 | --- | --- |
-| [DSH Go 本机](../integrations/dsh-go/README.md) | 在同一部手机安装 Go 及插件。在 L2D「连接管理」选「本机 DSH Go」并开启配对，再到 Go「设置」的「DSH L2D桥接」点连接。返回 L2D 核对标识并允许配对。 |
+| [DSH Go 本机](../integrations/dsh-go/README.md) | 在同一部手机安装 Go 及插件。在 L2D「连接管理」选「本机 DSH Go」并开启配对，再到 Go「全部功能」的「DSH L2D桥接」点连接。返回 L2D 核对标识并允许配对。 |
 | [DeepSeek Harness](../integrations/dsh-harness/README.md) | 在现有宿主安装适配器，使用通话服务地址和手机连接码配对。 |
 | [AstrBot](../integrations/astrbot/README.md) | 上传独立插件 ZIP，选择手机 WebChat 配置，完成配对。 |
 | 模型 API | 在「连接管理」填写模型 API 地址和 Key，以及通话中继地址和可选的中继 Key。中继需支持 `/client-ws`。外接语音 API 在「音色管理」单独配置。 |

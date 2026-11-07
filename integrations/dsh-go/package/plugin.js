@@ -1,4 +1,5 @@
 import {LocalManager} from './manager.mjs';
+import {registerNativePanel} from './native-panel.mjs';
 import {defaultTextModel} from './proactive.mjs';
 export const name = 'dsh-go-live2d-call';
 const PREFIX = '/api/dsh-go-live2d/v1/';
@@ -13,6 +14,7 @@ export function apply(ctx, _config = {}, options = {}) {
       getSpeechController: options.getSpeechController || (() => speechController),
       getProactiveRoute: options.getProactiveRoute || (() => defaultTextModel(scoped))});
     scoped.on('dispose', () => manager.dispose());
+    scoped.inject(['dshGo'], native => registerNativePanel(native.dshGo, manager));
     // Optional injection must never keep the text connector pending while speech starts.
     scoped.inject(['speechController'], speechScoped => {
       const current = speechScoped.speechController; speechController = current; manager.refreshSpeech();

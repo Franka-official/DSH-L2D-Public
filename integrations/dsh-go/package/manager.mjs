@@ -32,6 +32,7 @@ export class LocalManager {
     this.connector = null; this.pairingFingerprint = null; this.closed = false;
     this.diagnostics = []; this.lastHeartbeatAtMs = null;
     this.restoring = null; this.recovery = null;
+    this.statusListeners = new Set();
   }
   diagnostic(stage, code, httpStatus) {
     // Only fixed call-site identifiers and a numeric HTTP status are accepted; no error body or secret.
@@ -51,11 +52,19 @@ export class LocalManager {
         (['identity_error', 'connection_error', 'relay_error', 'connection_stopped', 'protocol_error', 'reconnect_failed'].includes(this.status) && shownDiagnostic ? ' [诊断 ' + shownDiagnostic.stage + ': ' + shownDiagnostic.code +
           (shownDiagnostic.http_status ? ' HTTP ' + shownDiagnostic.http_status : '') + ']' : '')};
   }
+  observeStatus(listener) {
+    listener();
+    this.statusListeners.add(listener);
+    return () => this.statusListeners.delete(listener);
+  }
   setStatus(status) {
     if (this.closed) return;
     this.status = Object.hasOwn(labels, status) ? status : 'connection_error';
     this.lastHeartbeatAtMs = this.status === 'paired' ? Date.now() : null;
     if (this.status !== 'authorizing') this.pairingFingerprint = null;
+    for (const listener of this.statusListeners) {
+      try {listener();} catch {} // A panel consumer cannot interrupt the connector.
+    }
   }
   refreshSpeech() {
     if (!this.closed) void this.connector?.speech?.refreshController()?.catch(() => {});
@@ -239,5 +248,5 @@ export class LocalManager {
     if (old) await old.dispose();
     return this.snapshot();
   }
-  async dispose() {await this.disconnect(); this.closed = true;}
+  async dispose() {await this.disconnect(); this.closed = true; this.statusListeners.clear();}
 }

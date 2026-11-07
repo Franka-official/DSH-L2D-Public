@@ -16,7 +16,7 @@ Go’s on-device runtime uses Node.js 22.19 or later.
    ```
 
 2. Reload the Go engine when prompted. In L2D Connection settings, select Local DSH Go and tap the pairing button. Open Go manually if it does not open automatically.
-3. In Go settings, open DSH L2D Bridge (`DSH L2D桥接`) and tap Connect. Return to L2D, compare the displayed codes and approve. Use the same entry to reconnect later.
+3. In Go, open All Features, select DSH L2D Bridge (`DSH L2D桥接`) and tap Connect. Return to L2D, compare the displayed codes and approve. Use the same entry to reconnect later.
 
 Pairing uses loopback on the phone. Model inference follows Go's provider configuration. Bridge approval is separate from phone control and accessibility permissions.
 

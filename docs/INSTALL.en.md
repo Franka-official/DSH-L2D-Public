@@ -14,7 +14,7 @@ Choose Connect DSH Go (连接 DSH Go) to open the same-phone connection page. To
 
 | Source | Setup |
 | --- | --- |
-| [Same-phone DSH Go](../integrations/dsh-go/README.en.md) | Install Go and the plugin on the same phone. In L2D Connection settings, select Local DSH Go and start pairing. Open DSH L2D Bridge (`DSH L2D桥接`) in Go settings and connect. Return to L2D, compare the displayed codes and approve. |
+| [Same-phone DSH Go](../integrations/dsh-go/README.en.md) | Install Go and the plugin on the same phone. In L2D Connection settings, select Local DSH Go and start pairing. Open DSH L2D Bridge (`DSH L2D桥接`) under Go’s All Features and connect. Return to L2D, compare the displayed codes and approve. |
 | [DeepSeek Harness](../integrations/dsh-harness/README.en.md) | Install the adapter in the existing host. Pair with the call service URL and a phone code. |
 | [AstrBot](../integrations/astrbot/README.en.md) | Upload the standalone plugin ZIP, select a mobile WebChat profile, and pair. |
 | Model API | Under Connection settings, enter the model API address and key, then the call relay address and its optional key. The relay must support `/client-ws`. Configure an external speech API separately under Voice settings. |
