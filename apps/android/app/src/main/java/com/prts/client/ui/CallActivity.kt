@@ -1026,7 +1026,7 @@ class CallActivity : AppCompatActivity() {
             if (!foreground && !mediaSuspended) return@WsClient
             connectionState = when {
                 state == "open" -> "已连接"
-                localDsh && state == "unauthorized" -> "本机授权已失效，请到 DSH Go 设置重连"
+                localDsh && state == "unauthorized" -> "本机授权已失效，请到 DSH Go 的「全部功能」→「DSH L2D桥接」重连"
                 localDsh -> "等待 DSH Go 本机连接"
                 state == "connecting" -> "连接中"
                 state == "invalid-url" -> "服务器地址不正确"

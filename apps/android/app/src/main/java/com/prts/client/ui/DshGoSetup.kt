@@ -28,7 +28,7 @@ internal object DshGoSetup {
                 (if (installed) "" else "先在同一部手机安装并初始化 DSH Go。\n\n") +
                     "下载 DSH Go 插件 ZIP 并解压。\n" +
                     "在 Go 终端进入解压目录，运行 node install.mjs --install，再重载 Go 引擎。\n" +
-                    "在 Go 的「设置」→「DSH L2D桥接」点连接。"
+                    "在 Go 的「全部功能」→「DSH L2D桥接」点连接。"
             )
             .setPositiveButton("插件下载") { _, _ -> openPage(activity, PLUGIN) }
             .setNegativeButton("返回", null)

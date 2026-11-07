@@ -83,7 +83,7 @@ class LocalDshBridgeService : Service() {
         val builder = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CHANNEL) else Notification.Builder(this)
         return builder.setSmallIcon(android.R.drawable.stat_sys_upload_done)
             .setContentTitle(if (online) "DSH Go · 本机已连接" else "DSH Go · 等待连接")
-            .setContentText(if (online) "通话使用已授权的本机插件" else "可在 DSH Go 设置中点连接")
+            .setContentText(if (online) "通话使用已授权的本机插件" else "可在 DSH Go 的「全部功能」→「DSH L2D桥接」点连接")
             .setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true)
             .addAction(Notification.Action.Builder(android.R.drawable.ic_menu_close_clear_cancel, "停止连接", stop).build())
             .build()
