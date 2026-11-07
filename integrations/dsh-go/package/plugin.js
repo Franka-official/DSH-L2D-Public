@@ -22,9 +22,13 @@ export function apply(ctx, _config = {}, options = {}) {
     });
     for (const [action, method] of [['status', 'GET'], ['prepare', 'GET'], ['connect', 'POST'], ['resume', 'POST'], ['disconnect', 'POST']]) {
       scoped.effect(() => scoped.connection.fetch.register({path: PREFIX + action, methods: [method], requestBody: 'buffered',
-        fetch: async () => Response.json(action === 'status' ? manager.snapshot() : action === 'prepare' ? await manager.prepare()
-          : action === 'connect' || action === 'resume' ? await manager.connectLocal()
-            : await manager.disconnect(), {headers: {'cache-control': 'no-store'}})}));
+        fetch: async () => {
+          if (action === 'resume') void manager.connectLocal().catch(() => manager.setStatus('connection_error'));
+          return Response.json(action === 'status' || action === 'resume' ? manager.snapshot()
+            : action === 'prepare' ? await manager.prepare()
+              : action === 'connect' ? await manager.connectLocal() : await manager.disconnect(),
+          {headers: {'cache-control': 'no-store'}});
+        }}));
     }
     void manager.restore();
   });

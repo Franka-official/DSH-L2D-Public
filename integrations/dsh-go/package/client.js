@@ -14,7 +14,7 @@ globalThis.__ModuleLoader__.load({id: 'dsh-go-live2d-call', factory: require => 
     identity_error: '身份验证失败',
     disconnecting: '断开中',
     paired: '已连接',
-    offline: 'Go 引擎离线',
+    offline: '暂时无法读取桥接状态',
     dropped: '已断开',
   };
   const title = 'DSH L2D桥接';
@@ -90,7 +90,7 @@ globalThis.__ModuleLoader__.load({id: 'dsh-go-live2d-call', factory: require => 
           const value = await request(action, 'POST', signal);
           if (!signal.aborted) update(value);
         } catch {
-          if (!signal.aborted) offline();
+          if (!signal.aborted) setStatus('loading');
         } finally {
           commanding = false;
         }
