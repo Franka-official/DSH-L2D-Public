@@ -132,6 +132,7 @@ object LocalDshBridge {
         val result = JSONObject().put("protocol", PROTOCOL).put("app", "com.prts.client")
             .put("transport", "http-long-poll").put("images", false).put("asr", asrReady)
             .put("asr_protocol", "live2d.asr.v1")
+            .put("asr_preparation_protocol", "live2d.asr-preparation.v1")
             .put("proactive_protocol", LocalDshHub.PROACTIVE_PROTOCOL)
             .put("call_diagnostics", "live2d.call-options.v1")
             .put("presentation", "live2d.presentation.v1")

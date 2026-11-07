@@ -9,7 +9,7 @@ globalThis.__ModuleLoader__.load({id: 'dsh-go-live2d-call', factory: require => 
     connecting: '连接中',
     reconnecting: '重连中',
     reconnect_failed: '重连失败',
-    launch_required: '开启／恢复本机桥接',
+    launch_required: '请在 DSH L2D 开启本机桥接',
     pairing_busy: '授权处理中',
     identity_error: '身份验证失败',
     disconnecting: '断开中',
@@ -136,7 +136,9 @@ globalThis.__ModuleLoader__.load({id: 'dsh-go-live2d-call', factory: require => 
     button,
     h('div', {role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true', 'data-local-status': status},
       h('div', {style: {fontWeight: 600, fontSize: 14}}, label),
-      fingerprint && h('div', {style: {font: '600 20px monospace', letterSpacing: '.16em', marginTop: 7}}, fingerprint)));
+      fingerprint && h('div', {style: {font: '600 20px monospace', letterSpacing: '.16em', marginTop: 7}}, fingerprint),
+      (fingerprint || status === 'launch_required') && h('div', {style: {fontSize: 13, marginTop: 7}},
+        fingerprint ? '返回 DSH L2D 核对标识并允许配对' : '打开 DSH L2D 的「连接管理」→「本机 DSH Go」，开启桥接后回来重试')));
   }
   return {inject: ['slots', 'connection'], apply(ctx) {
     ctx.slots.inject('settings.section', () => ctx.slots.register({name: 'settings.section', id: 'dsh-go-live2d-local', order: 80, label: title}, Settings));

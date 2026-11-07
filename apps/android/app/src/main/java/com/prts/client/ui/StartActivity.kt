@@ -79,6 +79,9 @@ class StartActivity : AppCompatActivity() {
     private var placement = PresentationTransform()
     private var placementEditor: CharacterPlacementEditor.Handle? = null
     private var sheet: BottomSheetDialog? = null
+    private val firstRunGuide = FirstRunGuide(this) {
+        showSettings(initialPage = SettingsDrawerController.Page.CONNECTION, preferredMode = ConnectionMode.LOCAL_DSH)
+    }
     private var bridgeSettingsTick: Runnable? = null
     private var settings: SheetSettingsBinding? = null
     private var activeDraft: SettingsDraft? = null
@@ -261,9 +264,10 @@ class StartActivity : AppCompatActivity() {
     }
 
     private fun showSettings(restore: SettingsDraft? = null,
-        initialPage: SettingsDrawerController.Page = SettingsDrawerController.Page.HOME) {
+        initialPage: SettingsDrawerController.Page = SettingsDrawerController.Page.HOME,
+        preferredMode: ConnectionMode? = null) {
         if (sheet?.isShowing == true) return
-        val draft = restore ?: runCatching { SettingsDraft(ConnectionSettings.selectedMode(this),
+        val draft = restore ?: runCatching { SettingsDraft(preferredMode ?: ConnectionSettings.selectedMode(this),
             ConnectionMode.values().associateWith { ConnectionSettings.simpleUrl(this, it) }.toMutableMap(),
             callRelayUrl = Prefs.get(this).first,
             language = LocalVoiceSettings.loadReplyLanguage(this)) }.getOrElse { toast("连接设置无法读取"); return }
@@ -271,12 +275,20 @@ class StartActivity : AppCompatActivity() {
         val dialog = BottomSheetDialog(this); val s = SheetSettingsBinding.inflate(layoutInflater)
         sheet = dialog; settings = s; dialog.setContentView(s.root)
         val drawer = SettingsDrawerController(s, dialog)
+        s.btnSettingsGuide.setOnClickListener {
+            dialog.dismiss()
+            firstRunGuide.show()
+        }
         s.proactiveSpeechSwitch.isChecked = CallProactiveSettings.enabled(this)
         s.editProactiveWaitSeconds.setText(CallProactiveSettings.waitSeconds(this).toString())
         var rendering = false
         val buttons = mutableMapOf<ConnectionMode, RadioButton>()
         val bridgeButton = android.widget.Button(this)
         val stopLocal = android.widget.Button(this).apply { text = "停止本机连接" }
+        val goHelp = android.widget.Button(this).apply {
+            text = "安装或查找 DSH Go 插件"
+            setOnClickListener { DshGoSetup.showPluginHelp(this@StartActivity) }
+        }
         var displayedFingerprint: String? = null
         fun renderLocalBridge() {
             val running = LocalDshBridgeService.running
@@ -284,35 +296,45 @@ class StartActivity : AppCompatActivity() {
             val awaiting = LocalDshBridge.awaitingLocalPair()
             val fingerprint = LocalDshBridge.pendingFingerprint()
             displayedFingerprint = fingerprint
+            val goInstalled = DshGoSetup.installed(this)
+            goHelp.visibility = View.VISIBLE
             stopLocal.visibility = if (running) View.VISIBLE else View.GONE
-            bridgeButton.visibility = if (!running || !saved) View.VISIBLE else View.GONE
-            bridgeButton.isEnabled = fingerprint != null || !awaiting
+            bridgeButton.visibility = if (!running || !saved || goInstalled) View.VISIBLE else View.GONE
+            bridgeButton.isEnabled = fingerprint != null || !awaiting || goInstalled
             bridgeButton.text = when {
-                fingerprint != null -> "确认本机配对"
+                fingerprint != null -> "允许本机配对"
+                goInstalled && (awaiting || running && saved) -> "打开 DSH Go"
+                saved && goInstalled -> "恢复桥接并打开 DSH Go"
                 saved -> "恢复本机桥接"
                 awaiting -> "等待 DSH Go"
+                goInstalled -> "开启配对并打开 DSH Go"
                 else -> "开启本机配对"
             }
             s.connectionModeHint.text = when {
-                fingerprint != null -> "核对标识 · $fingerprint"
+                fingerprint != null -> "核对 Go 的标识 · $fingerprint"
                 LocalDshBridge.connectorReady -> if (LocalDshBridge.asrReady) "已连接" else "已连接 · 语音识别未就绪"
-                running && saved -> "等待连接"
-                else -> ""
+                awaiting || running && saved -> "在 Go 的「设置」→「DSH L2D桥接」点连接，再返回确认"
+                else -> "首次使用请先安装 Go 插件"
             }
             s.connectionModeHint.visibility = if (s.connectionModeHint.text.isNotEmpty()) View.VISIBLE else View.GONE
         }
         bridgeButton.setOnClickListener {
             runCatching {
                 val fingerprint = displayedFingerprint
+                val saved = LocalDshBridge.hasSavedGrant(this)
                 if (fingerprint != null) {
                     LocalDshBridge.approveLocalPair(fingerprint)
                     LocalDshBridgeService.rememberForOpen(this, true)
+                    ConnectionSettings.activateLocal(this)
+                } else if (LocalDshBridge.awaitingLocalPair() || LocalDshBridgeService.running && saved) {
+                    if (!DshGoSetup.open(this)) toast("请手动打开 DSH Go")
                 } else {
-                    if (LocalDshBridge.hasSavedGrant(this)) LocalDshBridgeService.rememberForOpen(this, true)
+                    if (saved) LocalDshBridgeService.rememberForOpen(this, true)
                     else LocalDshBridge.armLocalPairing(this)
                     LocalDshBridgeService.startFromVisible(this)
+                    ConnectionSettings.activateLocal(this)
+                    if (DshGoSetup.installed(this) && !DshGoSetup.open(this)) toast("请手动打开 DSH Go")
                 }
-                ConnectionSettings.activateLocal(this)
             }.onFailure { toast("本机桥接未连接") }
             renderLocalBridge()
         }
@@ -331,6 +353,7 @@ class StartActivity : AppCompatActivity() {
             val row = parent.indexOfChild(s.connectionModeHint) + 1
             parent.addView(bridgeButton, row)
             parent.addView(stopLocal, row + 1)
+            parent.addView(goHelp, row + 2)
         }
         fun capture() = captureSettings(s, draft)
         fun updateApiKeyHint() {
@@ -355,6 +378,7 @@ class StartActivity : AppCompatActivity() {
             } else {
                 bridgeButton.visibility = View.GONE
                 stopLocal.visibility = View.GONE
+                goHelp.visibility = View.GONE
                 s.connectionModeHint.visibility = View.GONE
             }
             s.editConnectionUrl.visibility = if (local) View.GONE else View.VISIBLE
@@ -440,6 +464,7 @@ class StartActivity : AppCompatActivity() {
                     }.show()
             }) else null
         ), voiceParent.indexOfChild(s.groupReplyLanguage) + 2)
+        voiceParent.addView(AsrPreparationSettingsPanel(this), voiceParent.indexOfChild(s.groupReplyLanguage) + 2)
         renderMode()
         s.groupConnectionMode.setOnCheckedChangeListener { group, id ->
             val mode = group.findViewById<RadioButton>(id)?.tag as? ConnectionMode
@@ -826,6 +851,7 @@ class StartActivity : AppCompatActivity() {
         preview?.startRender(); nextIdleAt = SystemClock.elapsedRealtime() + Random.nextLong(24000, 48001)
         directPlacement?.setForeground(true)
         handler.removeCallbacks(previewTick); handler.post(previewTick)
+        firstRunGuide.onResume()
         val draft = activeDraft; val s = settings
         if (sheet?.isShowing == true && draft != null && s != null && draft.mode !in setOf(ConnectionMode.DIRECT_API, ConnectionMode.LOCAL_DSH)) {
             resumePairing(s, draft)
@@ -840,6 +866,7 @@ class StartActivity : AppCompatActivity() {
         directPlacement?.setForeground(false); handler.removeCallbacks(previewTick); cancelPairing(); preview?.stopRender(); super.onPause()
     }
     override fun onDestroy() {
+        firstRunGuide.close()
         releaseAudio8WarmupOwner()
         foreground = false; directPlacement?.close(); directPlacement = null; placementEditor?.close(); cancelPairing(); handler.removeCallbacksAndMessages(null); preview?.stopRender(); preview = null
         backgroundEditor?.dismiss(); backgroundEditor = null

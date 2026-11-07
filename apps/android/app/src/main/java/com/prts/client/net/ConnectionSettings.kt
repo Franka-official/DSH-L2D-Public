@@ -17,7 +17,7 @@ enum class ConnectionMode(val title: String) {
     DIRECT_API("API 接入"),
     DEEPSEEK_HARNESS("DeepSeek Harness"),
     ASTRBOT("AstrBot"),
-    LOCAL_DSH("本机 DSHGo")
+    LOCAL_DSH("本机 DSH Go")
 }
 
 data class ConnectionPreset(val id: String, val title: String, val description: String,

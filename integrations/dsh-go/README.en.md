@@ -15,10 +15,10 @@ Go’s on-device runtime uses Node.js 22.19 or later.
    node install.mjs --install
    ```
 
-2. Reload the Go engine when prompted. In Go settings, open DSH L2D Bridge (`DSH L2D桥接`) and select Enable or restore local bridge (`开启／恢复本机桥接`). Older versions label the entry `本机 DSH L2D`.
-3. Follow Android's prompt to open L2D and approve the first connection. In L2D, select Local (`本机`) under Connection settings. Use the same Go entry to reconnect later.
+2. Reload the Go engine when prompted. In L2D Connection settings, select Local DSH Go and tap the pairing button. Open Go manually if it does not open automatically.
+3. In Go settings, open DSH L2D Bridge (`DSH L2D桥接`) and tap Connect. Return to L2D, compare the displayed codes and approve. Use the same entry to reconnect later.
 
-First-time App Link verification can require internet access. An approved phone can restore the local connection offline. Model inference follows Go's provider configuration. The bridge uses app-level approval, separate from phone control and accessibility services.
+Pairing uses loopback on the phone. Model inference follows Go's provider configuration. Bridge approval is separate from phone control and accessibility permissions.
 
 ## Update and maintain
 

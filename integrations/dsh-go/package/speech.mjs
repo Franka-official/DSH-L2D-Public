@@ -3,15 +3,36 @@ import {Buffer} from 'node:buffer';
 const ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/;
 const MAX_AUDIO_BYTES = 4 * 1024 * 1024;
 export const MAX_ASR_FRAME_CHARS = Math.ceil(MAX_AUDIO_BYTES / 3) * 4 + 4096;
+export const ASR_PREPARATION_PROTOCOL = 'live2d.asr-preparation.v1';
+const RESTARTABLE = new Set(['unprepared', 'failed', 'cancelled']);
+const PREPARATION_PHASES = new Set(['ready', 'standby', 'waking', 'checking', 'downloading', 'loading', 'cancelling', ...RESTARTABLE]);
 const USABLE = new Set(['ready', 'standby', 'waking']);
 const safeUnavailable = '本机语音识别尚未就绪，请检查 DSH Go 语音设置。';
 const safeFailed = '本次语音识别没有完成，请重新说一次。';
 
+function localSelection(catalog) {
+  const provider = catalog?.providers?.find(row => row.id === catalog.selection?.providerId);
+  return provider?.location === 'host-local' ? provider : null;
+}
+
 /** Only the user's already-selected host-local provider can receive recordings. */
 export function selectedLocalProvider(catalog) {
-  const provider = catalog?.providers?.find(row => row.id === catalog.selection?.providerId);
-  if (!provider || provider.location !== 'host-local' || !USABLE.has(provider.preparation?.phase ?? 'ready')) return null;
-  return provider;
+  const provider = localSelection(catalog);
+  return provider && USABLE.has(provider.preparation?.phase ?? 'ready') ? provider : null;
+}
+
+function preparationView(controller, catalog) {
+  const provider = localSelection(catalog);
+  const state = provider?.preparation;
+  const phase = state?.phase ?? (provider ? 'ready' : 'unavailable');
+  const view = {phase: PREPARATION_PHASES.has(phase) ? phase : 'unavailable',
+    can_prepare: RESTARTABLE.has(phase) && typeof controller?.prepare === 'function' && typeof controller.follow === 'function'};
+  if (phase === 'downloading' && Number.isSafeInteger(state.completedBytes) && state.completedBytes >= 0) {
+    view.completed_bytes = state.completedBytes;
+    if (Number.isSafeInteger(state.totalBytes) && state.totalBytes > 0 && state.totalBytes >= state.completedBytes)
+      view.total_bytes = state.totalBytes;
+  }
+  return view;
 }
 
 /** Recording recognition is independent of all model sessions and prompts. */
@@ -33,41 +54,67 @@ export class LocalSpeechChannel {
     } catch {return null;}
   }
   emit(frame, socket) {if (!this.closed && this.currentSocket === socket) this.send(frame, socket);}
-  async announce(socket) {
+  async announce(socket, preparationProtocol = false) {
     this.stopObservation();
     this.currentSocket = socket;
     if (this.closed) return;
-    const observation = {socket, abort: new AbortController(), task: null};
+    const observation = {socket, abort: new AbortController(), task: null, preparationProtocol, starting: false};
     this.observation = observation;
     let controller;
     try {controller = this.getController();} catch {}
     if (!controller || typeof controller.catalog !== 'function' || typeof controller.transcribe !== 'function') {
-      this.publishCapability(false, observation); return;
+      this.publishCapability(null, null, observation); return;
     }
-    try {this.publishCapability(Boolean(selectedLocalProvider(await controller.catalog())), observation);}
-    catch {this.publishCapability(false, observation);}
+    try {this.publishCapability(controller, await controller.catalog(), observation);}
+    catch {this.publishCapability(null, null, observation);}
     if (this.observation !== observation || observation.abort.signal.aborted || typeof controller.follow !== 'function') return;
     // Official readiness stream: no model preparation, download, preference write or polling.
     observation.task = (async () => {
       try {
         for await (const catalog of controller.follow(observation.abort.signal)) {
           if (observation.abort.signal.aborted || this.observation !== observation) break;
-          this.publishCapability(Boolean(selectedLocalProvider(catalog)), observation);
+          this.publishCapability(controller, catalog, observation);
         }
-      } catch {if (!observation.abort.signal.aborted) this.publishCapability(false, observation);}
+      } catch {if (!observation.abort.signal.aborted) this.publishCapability(null, null, observation);}
     })();
   }
-  publishCapability(asr, observation) {
+  publishCapability(controller, catalog, observation) {
     if (this.closed || observation.abort.signal.aborted || this.observation !== observation || this.currentSocket !== observation.socket) return;
-    if (this.lastCapability?.socket === observation.socket && this.lastCapability.asr === asr) return;
-    this.lastCapability = {socket: observation.socket, asr};
-    this.emit({type: 'capabilities', asr, ...asr ? {} : {asr_message: safeUnavailable}}, observation.socket);
+    const asr = Boolean(selectedLocalProvider(catalog));
+    const preparation = observation.preparationProtocol ? preparationView(controller, catalog) : null;
+    // Keep the shared carrier queue small. Transmit exact byte counts when a percent or MiB boundary changes.
+    const progress = preparation?.total_bytes ? Math.floor(preparation.completed_bytes / preparation.total_bytes * 100)
+      : Math.floor((preparation?.completed_bytes ?? 0) / 1048576);
+    const key = JSON.stringify([asr, preparation?.phase, preparation?.can_prepare, preparation?.total_bytes, progress]);
+    if (this.lastCapability?.socket === observation.socket && this.lastCapability.key === key) return;
+    this.lastCapability = {socket: observation.socket, key};
+    this.emit({type: 'capabilities', asr, ...asr ? {} : {asr_message: safeUnavailable},
+      ...preparation ? {asr_preparation: preparation} : {}}, observation.socket);
+  }
+  async prepareSelected(socket) {
+    const observation = this.observation;
+    if (!observation?.preparationProtocol || observation.socket !== socket || observation.starting || this.closed) return;
+    observation.starting = true;
+    let accepted = false;
+    try {
+      const controller = this.getController();
+      const catalog = await controller.catalog();
+      if (this.observation !== observation || observation.abort.signal.aborted) return;
+      if (preparationView(controller, catalog).can_prepare) {
+        // Host-owned work starts only after a user action on the paired phone.
+        await controller.prepare(localSelection(catalog).id);
+        accepted = true;
+      }
+    } catch {} finally {
+      observation.starting = false;
+      if (this.observation === observation) this.emit({type: 'asr-preparation-result', accepted}, socket);
+    }
   }
   stopObservation() {
     const old = this.observation; this.observation = null; old?.abort.abort();
   }
   refreshController() {
-    if (!this.closed && this.currentSocket) return this.announce(this.currentSocket);
+    if (!this.closed && this.currentSocket) return this.announce(this.currentSocket, this.observation?.preparationProtocol ?? false);
   }
   has(id) {return this.jobs.has(id);}
   accept(frame, socket) {

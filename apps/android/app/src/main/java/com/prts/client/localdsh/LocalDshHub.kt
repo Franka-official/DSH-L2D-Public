@@ -30,6 +30,22 @@ internal object LocalDshHub {
     private var asrFace: JSONObject? = null
     @Volatile var asrReady = false
         private set
+    data class AsrPreparation(val phase: String, val canPrepare: Boolean, val completedBytes: Long = 0, val totalBytes: Long = 0)
+    private val preparationPhases = setOf("unprepared", "checking", "downloading", "loading", "waking", "cancelling",
+        "ready", "standby", "failed", "cancelled", "unavailable")
+    private var preparation: AsrPreparation? = null
+    private var preparePendingUntil = 0L
+    fun asrPreparation(): AsrPreparation? = synchronized(lock) {
+        if (!connectorOnline(SystemClock.elapsedRealtime())) return null
+        val value = preparation ?: return null
+        if (SystemClock.elapsedRealtime() < preparePendingUntil && value.canPrepare) AsrPreparation("starting", false) else value
+    }
+    fun prepareAsr(): Boolean = synchronized(lock) {
+        if (asrPreparation()?.canPrepare != true || frames.size >= 30) return false
+        preparePendingUntil = SystemClock.elapsedRealtime() + 5_000L
+        enqueue(JSONObject().put("type", "prepare-asr"))
+        true
+    }
     private var sessionId = UUID.randomUUID().toString()
     private var replyLanguage = "zh"
     private val reply = StringBuilder()
@@ -137,6 +153,7 @@ internal object LocalDshHub {
     }
     fun detach(identity: Any) { synchronized(lock) { if (owner === identity) { cancel(); owner = null; events = null; state = null } } }
     fun shutdown() = synchronized(lock) {
+        preparation = null; preparePendingUntil = 0L
         stopped = true; requestId = null; asrId = null; asrFace = null; asrReady = false; proactiveReady = false; reply.setLength(0); playbackReply = null; connectorAt = 0; fastHeartbeat = false
         speechSegments.cancel(); speechEpoch++
         resetPresentation()
@@ -145,6 +162,7 @@ internal object LocalDshHub {
         main.post { synchronized(lock) { if (owner === identity) callback?.invoke("closed") } }
     }
     private fun resetConnectorQueue() {
+        preparation = null; preparePendingUntil = 0L
         connectorGeneration++
         frames.clear()
         cancel()
@@ -288,7 +306,26 @@ internal object LocalDshHub {
     }
     fun connectorEvent(data: JSONObject): Boolean = synchronized(lock) {
         val type = data.optString("type")
-        if (type == "capabilities") { asrReady = data.optBoolean("asr", false); return true }
+        if (type == "capabilities") {
+            asrReady = data.optBoolean("asr", false)
+            val value = data.optJSONObject("asr_preparation")
+            preparation = value?.let {
+                val phase = it.optString("phase").takeIf(preparationPhases::contains) ?: return@let null
+                val completed = it.optLong("completed_bytes").coerceIn(0L, 9_007_199_254_740_991L)
+                val total = it.optLong("total_bytes").takeIf { size -> size in completed..9_007_199_254_740_991L } ?: 0L
+                val canPrepare = phase in setOf("unprepared", "failed", "cancelled") && it.optBoolean("can_prepare")
+                AsrPreparation(phase, canPrepare, completed, total)
+            }
+            if (preparation?.canPrepare != true) preparePendingUntil = 0L
+            return true
+        }
+        if (type == "asr-preparation-result") {
+            if (!data.optBoolean("accepted") && preparePendingUntil != 0L) {
+                preparation = preparation?.copy(phase = "failed")
+                preparePendingUntil = 0L
+            }
+            return true
+        }
         if (type == "proactive-capability") {
             proactiveReady = data.optString("protocol") == PROACTIVE_PROTOCOL && data.optBoolean("available")
             return true

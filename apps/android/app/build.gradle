@@ -77,8 +77,8 @@ android {
         ndk { abiFilters 'arm64-v8a' }
         minSdk 26
         targetSdk 34
-        versionCode 74
-        versionName "0.0.1"
+        versionCode 75
+        versionName "0.0.2"
         buildConfigField 'String', 'TTS_EDITION', '"' + ttsEdition + '"'
         buildConfigField 'String', 'DEFAULT_TTS_BACKEND', ttsEdition == 'external' ? '"openai_speech_api"' : '"local_audio8"'
         buildConfigField 'String', 'DEFAULT_LOCAL_TTS_ENGINE', bundleMoss ? '"moss_nano"' : '"audio8"'
@@ -423,4 +423,35 @@ if (bundleAudio8) {
     }
     android.sourceSets.main.assets.srcDir(generated)
     tasks.matching { it.name in ['preBuild', 'mergeDebugAssets', 'mergeReleaseAssets'] }.configureEach { dependsOn(prepareAudio8Payload) }
+}
+
+def launcherCover = externalSetting('dshLauncherCover', 'DSH_ANDROID_LAUNCHER_COVER')
+if (launcherCover != null) {
+    def cover = file(launcherCover)
+    if (!cover.isFile() || !cover.name.endsWith('.png')) {
+        throw new GradleException('The release launcher cover must be a PNG file')
+    }
+    def generatedCover = layout.buildDirectory.dir('generated/releaseLauncherCover')
+    def prepareCover = tasks.register('prepareReleaseLauncherCover') {
+        inputs.file(cover)
+        outputs.dir(generatedCover)
+        doLast {
+            def output = generatedCover.get().asFile
+            copy {
+                from(cover)
+                into(new File(output, 'drawable-nodpi'))
+                rename { 'dsh_launcher_cover.png' }
+            }
+            def drawable = new File(output, 'drawable/launcher_mark.xml')
+            drawable.parentFile.mkdirs()
+            drawable.text = '''<?xml version="1.0" encoding="utf-8"?>
+<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
+    android:src="@drawable/dsh_launcher_cover" android:gravity="fill" />
+'''
+        }
+    }
+    android.sourceSets.release.res.srcDir(generatedCover)
+    tasks.matching { it.name in ['preReleaseBuild', 'mergeReleaseResources'] }.configureEach {
+        dependsOn(prepareCover)
+    }
 }

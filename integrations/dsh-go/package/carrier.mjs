@@ -1,6 +1,6 @@
 import {MobileRelayConnector} from './relay.mjs';
 import {LOCAL_ORIGIN, LOCAL_PREFIX, proveLocal} from './identity.mjs';
-import {LocalSpeechChannel, MAX_ASR_FRAME_CHARS} from './speech.mjs';
+import {ASR_PREPARATION_PROTOCOL, LocalSpeechChannel, MAX_ASR_FRAME_CHARS} from './speech.mjs';
 import {localHttpFetch} from './local-http.mjs';
 import {LocalProactiveText, PROACTIVE_PROTOCOL} from './proactive.mjs';
 
@@ -48,6 +48,7 @@ export function localCarrier(grant, fetch, diagnostic = () => {}, onHeartbeat = 
           if (this.readyState !== 1) return;
           this.emit('message', {data: JSON.stringify({type: 'paired', binding_id: grant.binding_id, connector_token: grant.connector_token,
             ...(discovery.asr_protocol === 'live2d.asr.v1' ? {asr_protocol: discovery.asr_protocol} : {}),
+            ...(discovery.asr_preparation_protocol === ASR_PREPARATION_PROTOCOL ? {asr_preparation_protocol: ASR_PREPARATION_PROTOCOL} : {}),
             ...(discovery.proactive_protocol === PROACTIVE_PROTOCOL ? {proactive_protocol: PROACTIVE_PROTOCOL} : {})})});
           diagnostic('carrier', 'PAIRED_DISPATCHED');
           if (this.readyState !== 1) return;
@@ -152,6 +153,10 @@ export class LocalConnector extends MobileRelayConnector {
       void this.proactive.cancel(frame.request_id, socket); return;
     }
     if (this.paired && (frame?.type === 'request' || frame?.type === 'transcribe')) this.proactive.interrupt(socket);
+    if (frame?.type === 'prepare-asr') {
+      if (this.paired && this.asrProtocol) await this.speech.prepareSelected(socket);
+      return;
+    }
     if (frame?.type === 'transcribe') {
       if (!this.paired || !this.asrProtocol) throw Error('asr_protocol_required');
       this.speech.accept(frame, socket); return;
@@ -166,7 +171,7 @@ export class LocalConnector extends MobileRelayConnector {
       this.refreshProactive();
       this.asrProtocol = frame.asr_protocol === 'live2d.asr.v1';
       this.diagnostic('speech', this.asrProtocol ? 'PROTOCOL_PRESENT' : 'PROTOCOL_ABSENT');
-      if (this.asrProtocol) {await this.speech.announce(socket); this.diagnostic('speech', 'ANNOUNCE_RETURNED');}
+      if (this.asrProtocol) {await this.speech.announce(socket, frame.asr_preparation_protocol === ASR_PREPARATION_PROTOCOL); this.diagnostic('speech', 'ANNOUNCE_RETURNED');}
     }
   }
   async dispose() {this.proactive.interrupt(this.socket); await this.speech.dispose(); await super.dispose();}
