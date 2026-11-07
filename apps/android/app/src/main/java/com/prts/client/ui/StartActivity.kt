@@ -290,7 +290,14 @@ class StartActivity : AppCompatActivity() {
             setOnClickListener { DshGoSetup.showPluginHelp(this@StartActivity) }
         }
         var displayedFingerprint: String? = null
+        var activateAfterReconnect = false
         fun renderLocalBridge() {
+            val connected = LocalDshBridge.connectorReady
+            if (activateAfterReconnect && connected) {
+                activateAfterReconnect = false
+                runCatching { ConnectionSettings.activateLocal(this) }
+                    .onFailure { toast("本机连接设置未能保存") }
+            }
             val running = LocalDshBridgeService.running
             val saved = LocalDshBridge.hasSavedGrant(this)
             val awaiting = LocalDshBridge.awaitingLocalPair()
@@ -312,7 +319,7 @@ class StartActivity : AppCompatActivity() {
             }
             s.connectionModeHint.text = when {
                 fingerprint != null -> "核对 Go 的标识 · $fingerprint"
-                LocalDshBridge.connectorReady -> if (LocalDshBridge.asrReady) "已连接" else "已连接 · 语音识别未就绪"
+                connected -> if (LocalDshBridge.asrReady) "已连接" else "已连接 · 语音识别未就绪"
                 awaiting || running && saved -> "在 Go 的「设置」→「DSH L2D桥接」点连接，再返回确认"
                 else -> "首次使用请先安装 Go 插件"
             }
@@ -326,19 +333,23 @@ class StartActivity : AppCompatActivity() {
                     LocalDshBridge.approveLocalPair(fingerprint)
                     LocalDshBridgeService.rememberForOpen(this, true)
                     ConnectionSettings.activateLocal(this)
-                } else if (LocalDshBridge.awaitingLocalPair() || LocalDshBridgeService.running && saved) {
-                    if (!DshGoSetup.open(this)) toast("请手动打开 DSH Go")
                 } else {
-                    if (saved) LocalDshBridgeService.rememberForOpen(this, true)
-                    else LocalDshBridge.armLocalPairing(this)
-                    LocalDshBridgeService.startFromVisible(this)
-                    ConnectionSettings.activateLocal(this)
-                    if (DshGoSetup.installed(this) && !DshGoSetup.open(this)) toast("请手动打开 DSH Go")
+                    val listening = LocalDshBridge.awaitingLocalPair() || LocalDshBridgeService.running && saved
+                    if (!listening) {
+                        if (saved) LocalDshBridgeService.rememberForOpen(this, true)
+                        else LocalDshBridge.armLocalPairing(this)
+                        LocalDshBridgeService.startFromVisible(this)
+                    }
+                    activateAfterReconnect = saved
+                    if ((listening || DshGoSetup.installed(this)) && !DshGoSetup.open(this)) {
+                        toast("请手动打开 DSH Go")
+                    }
                 }
             }.onFailure { toast("本机桥接未连接") }
             renderLocalBridge()
         }
         stopLocal.setOnClickListener {
+            activateAfterReconnect = false
             LocalDshBridgeService.stop(this)
             renderLocalBridge()
         }
@@ -376,6 +387,7 @@ class StartActivity : AppCompatActivity() {
                 renderLocalBridge()
                 bridgeSettingsTick?.let { handler.postDelayed(it, 1_000L) }
             } else {
+                activateAfterReconnect = false
                 bridgeButton.visibility = View.GONE
                 stopLocal.visibility = View.GONE
                 goHelp.visibility = View.GONE
