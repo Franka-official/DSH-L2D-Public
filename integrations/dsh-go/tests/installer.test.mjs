@@ -59,7 +59,7 @@ test('same-version cleanup removes only the active package extras and retains it
   assert.equal(readdirSync(join(f.home, 'dsh-go/plugin-backups')).length, 1);
 }));
 
-for (const previousVersion of ['0.2.7', '0.2.13', '0.2.14', '0.2.15', '0.2.16', '0.2.17']) test(`${previousVersion} upgrades to ${VERSION}`, () => fixture(f => {
+for (const previousVersion of ['0.2.7', '0.2.13', '0.2.14', '0.2.15', '0.2.16', '0.2.17', '0.2.18']) test(`${previousVersion} upgrades to ${VERSION}`, () => fixture(f => {
   installRelease({...f.options, runDsh: f.register});
   const file = join(f.target, 'package.json'), metadata = JSON.parse(readFileSync(file)); metadata.version = previousVersion;
   writeFileSync(file, JSON.stringify(metadata)); writeFileSync(join(f.target, 'speech.mjs'), 'old-runtime');
