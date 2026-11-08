@@ -263,6 +263,10 @@ class StartActivity : AppCompatActivity() {
         placementEditor?.close()
     }
 
+    private val releaseUpdateController by lazy(LazyThreadSafetyMode.NONE) {
+        com.prts.client.update.ReleaseUpdateController(this)
+    }
+
     private fun showSettings(restore: SettingsDraft? = null,
         initialPage: SettingsDrawerController.Page = SettingsDrawerController.Page.HOME,
         preferredMode: ConnectionMode? = null) {
@@ -275,6 +279,11 @@ class StartActivity : AppCompatActivity() {
         val dialog = BottomSheetDialog(this); val s = SheetSettingsBinding.inflate(layoutInflater)
         sheet = dialog; settings = s; dialog.setContentView(s.root)
         val drawer = SettingsDrawerController(s, dialog)
+        val updates = UpdateManagementPanel.create(
+            this, releaseUpdateController::refresh, releaseUpdateController::update, releaseUpdateController::goUpdate,
+        )
+        s.settingsUpdateSection.addView(updates.view)
+        releaseUpdateController.attach(updates)
         s.btnSettingsGuide.setOnClickListener {
             dialog.dismiss()
             firstRunGuide.show()
@@ -551,6 +560,7 @@ class StartActivity : AppCompatActivity() {
         addCanvasQualitySettings(s)
         renderCharacters(s); renderBackgrounds(s)
         dialog.setOnDismissListener {
+            releaseUpdateController.detach(updates)
             cancelPairing()
             if (sheet === dialog) {
                 bridgeSettingsTick?.let { handler.removeCallbacks(it) }; bridgeSettingsTick = null

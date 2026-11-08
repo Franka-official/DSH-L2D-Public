@@ -24,6 +24,11 @@ internal object LocalDshHub {
     private fun connectorOnline(now: Long): Boolean =
         connectorAt != 0L && now - connectorAt < (if (fastHeartbeat) 3_500L else 45_000L)
     val connectorReady: Boolean get() = synchronized(lock) { connectorOnline(SystemClock.elapsedRealtime()) }
+    private val pluginVersionPattern = Regex("""[0-9]{1,9}\.[0-9]{1,9}\.[0-9]{1,9}""")
+    private var pluginVersion: String? = null
+    fun connectedPluginVersion(): String? = synchronized(lock) {
+        pluginVersion.takeIf { connectorOnline(SystemClock.elapsedRealtime()) }
+    }
     private var requestId: String? = null
     private var asrId: String? = null
     private var asrReplyLanguage = "zh"
@@ -153,6 +158,7 @@ internal object LocalDshHub {
     }
     fun detach(identity: Any) { synchronized(lock) { if (owner === identity) { cancel(); owner = null; events = null; state = null } } }
     fun shutdown() = synchronized(lock) {
+        pluginVersion = null
         preparation = null; preparePendingUntil = 0L
         stopped = true; requestId = null; asrId = null; asrFace = null; asrReady = false; proactiveReady = false; reply.setLength(0); playbackReply = null; connectorAt = 0; fastHeartbeat = false
         speechSegments.cancel(); speechEpoch++
@@ -162,6 +168,7 @@ internal object LocalDshHub {
         main.post { synchronized(lock) { if (owner === identity) callback?.invoke("closed") } }
     }
     private fun resetConnectorQueue() {
+        pluginVersion = null
         preparation = null; preparePendingUntil = 0L
         connectorGeneration++
         frames.clear()
@@ -307,6 +314,7 @@ internal object LocalDshHub {
     fun connectorEvent(data: JSONObject): Boolean = synchronized(lock) {
         val type = data.optString("type")
         if (type == "capabilities") {
+            pluginVersion = data.optString("plugin_version").takeIf(pluginVersionPattern::matches)
             asrReady = data.optBoolean("asr", false)
             val value = data.optJSONObject("asr_preparation")
             preparation = value?.let {

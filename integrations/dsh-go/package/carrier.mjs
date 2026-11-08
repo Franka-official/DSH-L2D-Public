@@ -3,6 +3,7 @@ import {LOCAL_ORIGIN, LOCAL_PREFIX, proveLocal} from './identity.mjs';
 import {ASR_PREPARATION_PROTOCOL, LocalSpeechChannel, MAX_ASR_FRAME_CHARS} from './speech.mjs';
 import {localHttpFetch} from './local-http.mjs';
 import {LocalProactiveText, PROACTIVE_PROTOCOL} from './proactive.mjs';
+import packageMetadata from './package.json' with {type: 'json'};
 
 const HEARTBEAT_INTERVAL_MS = 1000;
 const HEARTBEAT_TIMEOUT_MS = 850;
@@ -69,7 +70,10 @@ export function localCarrier(grant, fetch, diagnostic = () => {}, onHeartbeat = 
             body: JSON.stringify(frame)}).catch(() => {});
           return;
         }
-        if (frame.type === 'capabilities') diagnostic('speech_capability', 'SEND_BEGIN');
+        if (frame.type === 'capabilities') {
+          frame.plugin_version = packageMetadata.version;
+          diagnostic('speech_capability', 'SEND_BEGIN');
+        }
         this.queue = this.queue.then(() => this.request('/connector/event', {method: 'POST',
           headers: {'content-type': 'application/json'}, body: JSON.stringify(frame)}, 10000)).catch(() => {diagnostic('carrier', 'EVENT_FAILED'); this.fail();});
       }

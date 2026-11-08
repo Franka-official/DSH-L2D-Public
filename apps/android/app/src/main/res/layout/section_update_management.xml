@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:orientation="vertical" android:paddingBottom="12dp">
+    <TextView android:id="@+id/currentAppVersion" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:textColor="@color/ui_text" android:textSize="16sp"
+        android:fontFamily="sans-serif-medium"/>
+    <TextView android:id="@+id/latestAppVersion" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:layout_marginTop="10dp"
+        android:textColor="@color/ui_text" android:textSize="15sp"/>
+    <TextView android:id="@+id/goPluginStatus" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:layout_marginTop="10dp"
+        android:textColor="@color/ui_text" android:textSize="15sp"/>
+    <com.google.android.material.button.MaterialButton android:id="@+id/btnCheckUpdate"
+        style="@style/PRTS.Button" android:layout_width="match_parent" android:layout_height="48dp"
+        android:layout_marginTop="14dp" android:text="检查更新" android:textSize="14sp"
+        android:textColor="@color/ui_accent_ink" app:backgroundTint="@color/ui_accent" app:cornerRadius="24dp"/>
+    <com.google.android.material.button.MaterialButton android:id="@+id/btnApplyUpdate"
+        style="@style/PRTS.Button" android:layout_width="match_parent" android:layout_height="48dp"
+        android:layout_marginTop="8dp" android:text="下载更新" android:textSize="14sp" android:visibility="gone"
+        android:textColor="@color/ui_accent_ink" app:backgroundTint="@color/ui_accent" app:cornerRadius="24dp"/>
+    <TextView android:id="@+id/updateState" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:layout_marginTop="10dp" android:visibility="gone"
+        android:accessibilityLiveRegion="polite" android:textColor="@color/ui_text_secondary" android:textSize="13sp"/>
+    <com.google.android.material.button.MaterialButton android:id="@+id/btnApplyGoUpdate"
+        style="@style/PRTS.Button" android:layout_width="match_parent" android:layout_height="48dp"
+        android:layout_marginTop="8dp" android:text="下载配套 Go 插件" android:textSize="14sp" android:visibility="gone"
+        android:textColor="@color/ui_accent_ink" app:backgroundTint="@color/ui_accent" app:cornerRadius="24dp"/>
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="22dp" android:text="版本说明"
+        android:fontFamily="sans-serif-medium" android:textColor="@color/ui_text" android:textSize="16sp"/>
+    <LinearLayout android:id="@+id/updateNotes" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:orientation="vertical"/>
+</LinearLayout>

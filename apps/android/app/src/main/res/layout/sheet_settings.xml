@@ -53,6 +53,11 @@
                     android:paddingHorizontal="16dp" android:background="@drawable/ui_chip" android:text="新手引导"
                     android:textColor="@color/ui_text" android:textSize="15sp" android:fontFamily="sans-serif-medium"
                     android:clickable="true" android:focusable="true"/>
+                <TextView android:id="@+id/btnSettingsUpdate" android:layout_width="match_parent"
+                    android:layout_height="56dp" android:layout_marginTop="10dp" android:gravity="center_vertical"
+                    android:paddingHorizontal="16dp" android:background="@drawable/ui_chip" android:text="更新管理"
+                    android:textColor="@color/ui_text" android:textSize="15sp" android:fontFamily="sans-serif-medium"
+                    android:clickable="true" android:focusable="true"/>
             </LinearLayout>
             <LinearLayout android:id="@+id/settingsVoiceSection" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
@@ -181,6 +186,8 @@
                     android:maxLength="3" android:imeOptions="actionDone" android:importantForAutofill="no"
                     android:textColor="@color/ui_text" android:textSize="16sp"/>
             </LinearLayout>
+            <LinearLayout android:id="@+id/settingsUpdateSection" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone"/>
         </LinearLayout>
     </ScrollView>
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"

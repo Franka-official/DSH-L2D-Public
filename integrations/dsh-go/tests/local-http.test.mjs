@@ -5,6 +5,7 @@ import {createHmac} from 'node:crypto';
 import {localHttpFetch} from '../package/local-http.mjs';
 import {proveLocal, challengeId} from '../package/identity.mjs';
 import {LocalManager} from '../package/manager.mjs';
+import packageMetadata from '../package/package.json' with {type: 'json'};
 
 const origin = 'http://127.0.0.1:47651', prefix = '/local-dsh/v1', challenge = 'd'.repeat(64);
 const current = {binding_id: 'current-binding', connector_token: 'test_current_role_token', expires_at_ms: Date.now() + 1800000};
@@ -91,7 +92,9 @@ test('real TCP manager renews approved stale role through claim and returns ASR 
   try {
     manager.connect(); await manager.pending; await wait(() => posts.slice(before).some(row => row.type === 'transcription'));
     assert.equal(manager.snapshot().ready, true); assert.equal(stored.connector_token, current.connector_token);
-    assert.equal(posts.slice(before).find(row => row.type === 'capabilities').asr, true);
+    const capabilities = posts.slice(before).find(row => row.type === 'capabilities');
+    assert.equal(capabilities.asr, true);
+    assert.equal(capabilities.plugin_version, packageMetadata.version);
     assert.equal(posts.slice(before).find(row => row.type === 'transcription').text, '本机语音连接测试'); assert.equal(promptCount, 0);
     const rows = records.slice(recordBefore); assert.ok(rows.some(row => row.path.endsWith('/pair/claim')));
     assert.ok(rows.filter(row => row.path.endsWith('/connector/status')).every(row => row.headers.authorization === 'Bearer ' + current.connector_token));
